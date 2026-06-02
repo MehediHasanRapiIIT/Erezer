@@ -1,0 +1,510 @@
+// ─── Auth ────────────────────────────────────────────────────────────────────
+
+/** @deprecated phone+OTP login has been replaced with email/password. */
+export interface PhoneLoginResponse {
+  userId: string | null;
+  phoneNumber: string;
+  isNewUser: boolean;
+}
+
+/** @deprecated phone+OTP login has been replaced with email/password. */
+export interface OtpVerifyResponse {
+  userId: string;
+  phoneNumber: string;
+  token: string;
+  isNewUser: boolean;
+}
+
+export interface RegisterPayload {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+}
+
+export interface EmailLoginPayload {
+  email: string;
+  password: string;
+}
+
+export interface AuthTokenResponse {
+  userId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  emailVerified: boolean;
+  accessToken: string;
+  refreshToken: string;
+  expiresInSeconds: number;
+  tokenType: string;
+}
+
+export interface MessageResponse {
+  message: string;
+}
+
+// ─── Banner ───────────────────────────────────────────────────────────────────
+
+export interface ApiBanner {
+  id: string;
+  imageUrl: string;
+  fromDate: string;
+  toDate: string;
+  promotionTitle: string;
+  promotionDetails: string;
+}
+
+// ─── Category ─────────────────────────────────────────────────────────────────
+
+export interface ApiCategory {
+  id: number;
+  name: string;
+  isActive: boolean;
+}
+
+// ─── Product ──────────────────────────────────────────────────────────────────
+
+export interface ApiProduct {
+  id: number;
+  categoryId: number;
+  name: string;
+  description: string;
+  price: number;
+  discountPrice: number;
+  imageUrl: string;
+  isAvailable: boolean;
+
+  // Phase 3 — clothing brand fields
+  brand?: string | null;
+  gender?: string | null;
+  material?: string | null;
+  careInstructions?: string | null;
+  avgRating?: number;
+  totalReviews?: number;
+  stockQuantity?: number;
+}
+
+// ─── Variants & images (Phase 3) ────────────────────────────────────────────
+
+export interface ApiVariant {
+  id: number;
+  productId: number;
+  name: string | null;
+  size: string | null;
+  color: string | null;
+  colorHex: string | null;
+  sku: string | null;
+  stockQuantity: number | null;
+  priceOverride: number | null;
+}
+
+export interface ApiProductImage {
+  id: number;
+  productId: number;
+  url: string;
+  altText: string | null;
+  sortOrder: number;
+  isPrimary: boolean;
+}
+
+export interface ApiStockStatus {
+  productId: number;
+  isAvailable?: boolean;        // original field (may be absent)
+  stockStatus?: string;         // actual backend field: "IN_STOCK" | "OUT_OF_STOCK" | "LOW_STOCK"
+  stockQuantity: number;
+  lowStockThreshold?: number | null;
+}
+
+// ─── Home ─────────────────────────────────────────────────────────────────────
+
+export interface ApiHomeData {
+  banners: ApiBanner[];
+  categories: ApiCategory[];
+  popularItems: ApiProduct[];
+  featuredItems: ApiProduct[];
+}
+
+// ─── Cart ─────────────────────────────────────────────────────────────────────
+
+/** Standard envelope the backend wraps most non-auth responses in. */
+export interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+  timestamp: string;
+}
+
+/** Mirrors the backend CartItemDTO (the `data` payload of an ApiResponse). */
+export interface ApiCartItem {
+  cartItemId: string;
+  productId: number;
+  variantId: number | null;
+  productName: string;
+  imageUrl: string | null;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+  stockStatus: string;
+}
+
+/** Mirrors the backend CartResponseDTO. */
+export interface ApiCartResponse {
+  items: ApiCartItem[];
+  cartSubtotal: number;
+  cartGrandTotal: number;
+}
+
+export interface ApiCartValidation {
+  valid: boolean;
+  invalidItems: Array<{
+    cartItemId: number;
+    productId: string;
+    reason: string;
+  }>;
+}
+
+// ─── Address ──────────────────────────────────────────────────────────────────
+
+export type AddressType = 'HOME' | 'WORK' | 'OTHER';
+
+export interface ApiAddress {
+  id: number;
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  houseNumber: number | null;
+  apartmentName: string | null;
+  addressType: AddressType;
+  consumerId: string;
+}
+
+export interface AddressPayload {
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  houseNumber: number | null;
+  apartmentName: string | null;
+  addressType: AddressType;
+}
+
+// ─── Profile ──────────────────────────────────────────────────────────────────
+
+export interface ApiProfile {
+  id: string;
+  phoneNumber: string;
+  isActive: boolean;
+  firstName: string;
+  lastName: string;
+  email: string;
+  profileImage: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  createdAt: string;
+  updatedAt: string;
+  addresses: ApiAddress[];
+}
+
+export interface ProfileUpdatePayload {
+  firstName: string;
+  lastName: string;
+  email: string;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+// ─── Reviews ──────────────────────────────────────────────────────────────────
+
+export interface ApiReview {
+  reviewId: string;
+  userId: string;
+  userName: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+}
+
+export interface ApiReviewPage {
+  content: ApiReview[];
+  pageable: { pageNumber: number; pageSize: number };
+  totalElements: number;
+  totalPages: number;
+  last: boolean;
+  first: boolean;
+}
+
+export interface ApiRatingSummary {
+  productId: number;
+  avgRating: number;
+  totalReviews: number;
+  starBreakdown: Record<string, number>;
+}
+
+export interface SubmitReviewPayload {
+  userId: string;
+  orderId: string;
+  rating: number;
+  comment: string;
+}
+
+export interface UpdateReviewPayload {
+  userId: string;
+  rating: number;
+  comment: string;
+}
+
+// ─── Checkout / Order Create ──────────────────────────────────────────────────
+
+export interface OrderItemPayload {
+  productId: number;
+  quantity: number;
+  variantId: number | null;
+}
+
+export interface CreateOrderPayload {
+  deliveryAddress: string;
+  paymentMethod: string;
+  shopId: number;
+  deliveryCharge: number;
+  latitude: number | null;
+  longitude: number | null;
+  items: OrderItemPayload[];
+  // Phase 4 additions
+  couponCode?: string;
+  shippingZoneId?: number;
+}
+
+// ─── Phase 4: shipping, coupons, quote, bKash ───────────────────────────────
+
+export interface ShippingZone {
+  id: number;
+  code: string;
+  displayName: string;
+  countryCode: string;
+  flatFee: number;
+  freeAbove: number | null;
+  isDefault: boolean;
+  isActive: boolean;
+}
+
+export type CouponDiscountType = 'PERCENT' | 'FLAT' | 'FREE_SHIPPING';
+
+export interface CouponValidateRequest {
+  code: string;
+  cartSubtotal: number;
+  userId?: string;
+}
+
+export interface CouponValidateResponse {
+  valid: boolean;
+  code: string | null;
+  discountType: CouponDiscountType | null;
+  discountAmount: number;
+  removesShipping: boolean;
+  reason: string | null;
+}
+
+export interface CheckoutQuoteRequest {
+  items: OrderItemPayload[];
+  shippingZoneId?: number;
+  deliveryAddress?: string;
+  couponCode?: string;
+  userId?: string;
+}
+
+export interface CheckoutQuoteResponse {
+  subtotal: number;
+  shippingFee: number;
+  taxAmount: number;
+  discountAmount: number;
+  total: number;
+  shippingZoneId: number | null;
+  shippingZoneName: string | null;
+  couponCode: string | null;
+  couponDiscountType: CouponDiscountType | null;
+  couponMessage: string | null;
+  couponApplied: boolean;
+}
+
+export interface BkashPaymentResponse {
+  status: 'Initiated' | 'Completed' | 'Failed' | 'Cancelled';
+  paymentId: string;
+  bkashURL: string;
+  trxId: string | null;
+  amount: number;
+  currency: string;
+  merchantInvoiceNumber: string;
+  errorMessage: string | null;
+}
+
+// ─── Phase 5: returns + contact ─────────────────────────────────────────────
+
+export type ReturnStatus = 'REQUESTED' | 'APPROVED' | 'REJECTED' | 'PICKED_UP' | 'REFUNDED';
+
+export type ReturnReason =
+  | 'WRONG_SIZE'
+  | 'DEFECTIVE'
+  | 'NOT_AS_DESCRIBED'
+  | 'CHANGED_MIND'
+  | 'OTHER';
+
+export type ReturnItemCondition = 'SEALED' | 'OPENED' | 'DAMAGED' | 'OTHER';
+
+export interface ReturnItemRequest {
+  orderItemId: string;
+  quantity: number;
+  condition?: ReturnItemCondition;
+}
+
+export interface ReturnRequestPayload {
+  reason: ReturnReason;
+  customerNotes?: string;
+  items: ReturnItemRequest[];
+}
+
+export interface ReturnItem {
+  id: string;
+  orderItemId: string;
+  productId: number | null;
+  productName: string | null;
+  quantity: number;
+  condition: ReturnItemCondition | null;
+  lineRefundAmount: number | null;
+}
+
+export interface ReturnPhoto {
+  id: number;
+  url: string;
+  caption: string | null;
+}
+
+export interface ReturnRequestResponse {
+  id: string;
+  orderId: string;
+  userId: string | null;
+  customerEmail: string | null;
+  status: ReturnStatus;
+  reason: ReturnReason;
+  customerNotes: string | null;
+  adminNotes: string | null;
+  refundAmount: number | null;
+  requestedAt: string;
+  decidedAt: string | null;
+  decidedBy: string | null;
+  pickedUpAt: string | null;
+  refundedAt: string | null;
+  items: ReturnItem[];
+  photos: ReturnPhoto[];
+}
+
+export interface ContactMessagePayload {
+  name: string;
+  email: string;
+  subject?: string;
+  message: string;
+  orderId?: string;
+}
+
+// ─── Phase 6: newsletter ─────────────────────────────────────────────────────
+
+export interface NewsletterSubscribePayload {
+  email: string;
+  source?: string;
+}
+
+// ─── Orders ───────────────────────────────────────────────────────────────────
+
+export interface ApiOrderItem {
+  id: string;
+  productId: number;
+  productName: string;
+  imageUrl: string | null;
+  quantity: number;
+  priceAtOrder: number;
+  variantId: number | null;
+  variantName: string | null;
+  variantSize: string | null;
+  variantColor: string | null;
+}
+
+export interface ApiOrder {
+  id: string;
+  clientId: string;
+  riderId: string | null;
+  deliveryAddress: string;
+  totalAmount: number;
+  paymentMethod: string;
+  paymentId: string | null;
+  orderStatus: string;
+  shopId: number | null;
+  createdAt: string;
+  deliveryCharge: number;
+  latitude: number | null;
+  longitude: number | null;
+  orderItems: ApiOrderItem[];
+
+  // Phase 2 additive fields
+  courierName?: string | null;
+  trackingNumber?: string | null;
+  cancellationReason?: string | null;
+  cancelledAt?: string | null;
+  customerEmail?: string | null;
+  customerName?: string | null;
+}
+
+// ─── Order status (Phase 2) ──────────────────────────────────────────────────
+
+export type OrderStatus =
+  | 'PLACED'
+  | 'ACCEPTED'
+  | 'IN_PRODUCTION'
+  | 'PROCESSING'
+  | 'SHIPPED'
+  | 'OUT_FOR_DELIVERY'
+  | 'DELIVERED'
+  | 'CANCELLED'
+  | 'RETURNED'
+  /** @deprecated legacy alias for PLACED */
+  | 'PENDING';
+
+export interface OrderStatusHistoryEntry {
+  id: string;
+  orderId: string;
+  fromStatus: string | null;
+  toStatus: string;
+  note: string | null;
+  changedBy: string | null;
+  createdAt: string;
+}
+
+export interface OrderTracking {
+  orderId: string;
+  currentStatus: OrderStatus;
+  courierName: string | null;
+  trackingNumber: string | null;
+  history: OrderStatusHistoryEntry[];
+  allowedCustomerNextStates: OrderStatus[];
+}
+
+export interface CancelOrderPayload {
+  reason?: string;
+}
+
+export interface GuestOrderPayload {
+  email: string;
+  firstName: string;
+  lastName: string;
+  deliveryAddress: string;
+  paymentMethod: string;
+  shopId: number;
+  shippingFee: number;
+  items: OrderItemPayload[];
+}
+
+export interface AdminStatusUpdatePayload {
+  status: OrderStatus;
+  note?: string;
+  courierName?: string;
+  trackingNumber?: string;
+}

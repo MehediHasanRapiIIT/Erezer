@@ -1,0 +1,18 @@
+-- ============================================================================
+-- V1 — Baseline marker (Phase 2 schema snapshot)
+-- ============================================================================
+--
+-- This file is intentionally empty. Through Phase 2, the schema was managed
+-- by Hibernate's `ddl-auto=update`. From Phase 3 onward every schema change
+-- is expressed as an explicit Flyway migration (V2, V3, ...).
+--
+-- On an existing dev DB:
+--   `spring.flyway.baseline-on-migrate=true` causes Flyway to mark the DB as
+--   already at V1 without running this file. V2+ then apply cleanly.
+--
+-- On a fresh DB:
+--   Hibernate's ddl-auto=update will still create the legacy tables on first
+--   boot (Phase 0–2 entities). Flyway V2+ then layers the Phase 3 changes on
+--   top. Once the team is ready, replace this file with a full schema dump
+--   and switch ddl-auto to `validate`.
+SELECT 1;
