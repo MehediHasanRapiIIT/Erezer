@@ -31,6 +31,7 @@ export interface ProductRequest {
   discountPercentage?: number;
   shopId: number;
   isAvailable: boolean;
+  isNewArrival?: boolean;
   unit?: string;
   lowStockThreshold?: number;
   brand?: string;
@@ -51,6 +52,7 @@ export interface ProductResponse {
   discountPrice: number;
   imageUrl: string;
   isAvailable: boolean;
+  isNewArrival: boolean | null;
   stockQuantity: number;
   stockStatus: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
   avgRating: number;
@@ -102,12 +104,14 @@ export interface InventorySummary {
 export interface CategoryRequest {
   name: string;
   isActive: boolean;
+  imageUrl?: string | null;
 }
 
 export interface CategoryResponse {
   id: number;
   name: string;
   isActive: boolean;
+  imageUrl?: string | null;
   productCount: number;
 }
 
@@ -141,7 +145,6 @@ export interface OrderItem {
   variantId: number | null;
   variantName: string | null;
   variantSize: string | null;
-  variantColor: string | null;
 }
 
 export interface OrderResponse {

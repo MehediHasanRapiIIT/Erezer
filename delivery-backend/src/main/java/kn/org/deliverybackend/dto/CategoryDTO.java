@@ -21,6 +21,9 @@ public class CategoryDTO {
     @Schema(description = "Indicates if category is active", example = "true")
     private Boolean isActive;
 
+    @Schema(description = "Category image URL")
+    private String imageUrl;
+
     @Schema(description = "Creation timestamp")
     private LocalDateTime createdAt;
 }

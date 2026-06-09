@@ -13,7 +13,7 @@ import java.util.Optional;
 public interface VariantRepository extends JpaRepository<Variant, Long> {
 
     @Query("SELECT v FROM Variant v WHERE v.productId = :productId AND v.deleted = false " +
-            "ORDER BY v.size ASC, v.color ASC, v.id ASC")
+            "ORDER BY v.size ASC, v.id ASC")
     List<Variant> findByProductId(@Param("productId") Long productId);
 
     @Query("SELECT v FROM Variant v WHERE v.productId = :productId AND v.sku = :sku AND v.deleted = false")

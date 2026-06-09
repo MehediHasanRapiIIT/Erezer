@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { KeyValuePipe } from '@angular/common';
 import { SidebarComponent } from '../../../shared/sidebar/sidebar.component';
 import { CategoryService } from '../../../core/services/category.service';
+import { UploadService } from '../../../core/services/upload.service';
 import { parseApiError } from '../../../core/utils/api-error.util';
 import { HttpErrorResponse } from '@angular/common/http';
 
@@ -14,13 +15,38 @@ import { HttpErrorResponse } from '@angular/common/http';
   templateUrl: './add-category.component.html',
 })
 export class AddCategoryComponent {
-  constructor(private router: Router, private categoryService: CategoryService) {}
+  constructor(
+    private router: Router,
+    private categoryService: CategoryService,
+    private uploadService: UploadService,
+  ) {}
 
   categoryName = signal('');
   isActive     = signal(true);
+  imageUrl     = signal('');
+  uploading    = signal(false);
   isLoading    = signal(false);
   errorMessage = signal('');
   fieldErrors  = signal<Record<string, string>>({});
+
+  onImageSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    this.uploading.set(true);
+    this.errorMessage.set('');
+    this.uploadService.uploadImage(file).subscribe({
+      next: (url) => {
+        this.imageUrl.set(url);
+        this.uploading.set(false);
+        input.value = '';
+      },
+      error: (err: HttpErrorResponse) => {
+        this.errorMessage.set(parseApiError(err));
+        this.uploading.set(false);
+      },
+    });
+  }
 
   onSave() {
     if (!this.categoryName().trim()) return;
@@ -32,6 +58,7 @@ export class AddCategoryComponent {
     this.categoryService.createCategory({
       name: this.categoryName(),
       isActive: this.isActive(),
+      imageUrl: this.imageUrl() || null,
     }).subscribe({
       next: () => {
         this.isLoading.set(false);

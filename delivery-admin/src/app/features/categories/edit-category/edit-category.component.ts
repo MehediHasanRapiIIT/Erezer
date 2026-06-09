@@ -3,6 +3,7 @@ import { RouterLink, Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { SidebarComponent } from '../../../shared/sidebar/sidebar.component';
 import { CategoryService } from '../../../core/services/category.service';
+import { UploadService } from '../../../core/services/upload.service';
 import { parseApiError } from '../../../core/utils/api-error.util';
 import { HttpErrorResponse } from '@angular/common/http';
 
@@ -16,14 +17,36 @@ export class EditCategoryComponent implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private categoryService = inject(CategoryService);
+  private uploadService = inject(UploadService);
 
   categoryId   = signal<number>(0);
   categoryName = signal('');
   isActive     = signal(true);
+  imageUrl     = signal('');
+  uploading    = signal(false);
   isLoading    = signal(false);
   isFetching   = signal(true);
   errorMessage = signal('');
   fieldErrors  = signal<Record<string, string>>({});
+
+  onImageSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    this.uploading.set(true);
+    this.errorMessage.set('');
+    this.uploadService.uploadImage(file).subscribe({
+      next: (url) => {
+        this.imageUrl.set(url);
+        this.uploading.set(false);
+        input.value = '';
+      },
+      error: (err: HttpErrorResponse) => {
+        this.errorMessage.set(parseApiError(err));
+        this.uploading.set(false);
+      },
+    });
+  }
 
   ngOnInit() {
     const id = Number(this.route.snapshot.paramMap.get('id'));
@@ -33,6 +56,7 @@ export class EditCategoryComponent implements OnInit {
       next: (cat) => {
         this.categoryName.set(cat.name);
         this.isActive.set(cat.isActive);
+        this.imageUrl.set(cat.imageUrl ?? '');
         this.isFetching.set(false);
       },
       error: (err) => {
@@ -52,6 +76,7 @@ export class EditCategoryComponent implements OnInit {
     this.categoryService.updateCategory(this.categoryId(), {
       name: this.categoryName().trim(),
       isActive: this.isActive(),
+      imageUrl: this.imageUrl() || null,
     }).subscribe({
       next: () => {
         this.isLoading.set(false);

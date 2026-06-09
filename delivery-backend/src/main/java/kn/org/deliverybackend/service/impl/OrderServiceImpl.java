@@ -20,6 +20,7 @@ import kn.org.deliverybackend.enumeration.OrderStatus;
 import kn.org.deliverybackend.event.OrderPlacedEvent;
 import kn.org.deliverybackend.event.OrderStatusChangedEvent;
 import kn.org.deliverybackend.event.StockUpdateEvent;
+import kn.org.deliverybackend.exception.EmailNotVerifiedException;
 import kn.org.deliverybackend.exception.InsufficientStockException;
 import kn.org.deliverybackend.exception.InvalidStockOperationException;
 import kn.org.deliverybackend.exception.ResourceNotFoundException;
@@ -65,6 +66,9 @@ public class OrderServiceImpl implements OrderService {
     private final ShippingZoneRepository shippingZoneRepository;
     private final VariantRepository variantRepository;
 
+    // Phase 9: automatic product/category/global discounts
+    private final DiscountEngine discountEngine;
+
     @org.springframework.beans.factory.annotation.Value("${app.orders.cancellation-window-minutes:60}")
     private long cancellationWindowMinutes;
 
@@ -73,10 +77,15 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderDTO placeOrder(PlaceOrderRequestDTO request) {
+        // A signed-in customer must have a verified email before they can order.
+        requireVerifiedEmail(request.getClientId());
+
         // Reserve inventory and compute the raw subtotal (no shipping yet).
         BigDecimal subtotal = computeAndReserveStock(request.getItems(), null);
+        BigDecimal autoDiscount = computeAutoDiscount(request.getItems());
 
         PricedOrder priced = price(subtotal,
+                autoDiscount,
                 request.getCouponCode(),
                 request.getShippingZoneId(),
                 request.getDeliveryAddress(),
@@ -133,8 +142,10 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderDTO placeGuestOrder(GuestOrderRequestDTO request) {
         BigDecimal subtotal = computeAndReserveStock(request.getItems(), null);
+        BigDecimal autoDiscount = computeAutoDiscount(request.getItems());
 
         PricedOrder priced = price(subtotal,
+                autoDiscount,
                 request.getCouponCode(),
                 request.getShippingZoneId(),
                 request.getDeliveryAddress(),
@@ -189,12 +200,14 @@ public class OrderServiceImpl implements OrderService {
      * {@code placeGuestOrder} can't drift apart.
      */
     private PricedOrder price(BigDecimal subtotal,
+                              BigDecimal autoDiscount,
                               String couponCode,
                               Long shippingZoneId,
                               String deliveryAddress,
                               UUID userId) {
         PricedOrder out = new PricedOrder();
         out.subtotal = subtotal != null ? subtotal : BigDecimal.ZERO;
+        BigDecimal auto = autoDiscount != null ? autoDiscount : BigDecimal.ZERO;
 
         // Zone
         ShippingZone zone = shippingZoneId != null
@@ -206,15 +219,19 @@ public class OrderServiceImpl implements OrderService {
         out.shippingZoneId = zone != null ? zone.getId() : null;
         BigDecimal shipping = shippingService.computeFee(zone, out.subtotal);
 
+        // Automatic discounts come off first; the coupon then applies to the remainder.
+        BigDecimal couponBase = out.subtotal.subtract(auto);
+        if (couponBase.signum() < 0) couponBase = BigDecimal.ZERO;
+
         // Coupon (re-validated server-side)
-        BigDecimal discount = BigDecimal.ZERO;
+        BigDecimal couponDiscount = BigDecimal.ZERO;
         if (couponCode != null && !couponCode.isBlank()) {
             try {
                 Coupon coupon = couponService.getActiveByCode(couponCode);
                 CouponDiscountType type = CouponDiscountType.parse(coupon.getDiscountType())
                         .orElseThrow(() -> new InvalidStockOperationException(
                                 "Stored coupon has bad type: " + coupon.getDiscountType()));
-                discount = computeDiscount(type, coupon.getDiscountValue(), out.subtotal);
+                couponDiscount = computeDiscount(type, coupon.getDiscountValue(), couponBase);
                 if (type == CouponDiscountType.FREE_SHIPPING) {
                     shipping = BigDecimal.ZERO;
                 }
@@ -229,10 +246,34 @@ public class OrderServiceImpl implements OrderService {
         }
 
         out.shippingFee = shipping;
-        out.discountAmount = discount;
-        out.total = out.subtotal.subtract(discount).add(shipping);
+        out.discountAmount = auto.add(couponDiscount);
+        out.total = out.subtotal.subtract(out.discountAmount).add(shipping);
         if (out.total.signum() < 0) out.total = BigDecimal.ZERO;
         return out;
+    }
+
+    /**
+     * Sums automatic product/category/global discounts across the order's lines,
+     * deriving each line's subtotal the same way {@link #computeAndReserveStock}
+     * does (variant price-override else product base price) so the numbers stay
+     * coherent with {@code out.subtotal}.
+     */
+    private BigDecimal computeAutoDiscount(List<OrderItemRequestDTO> items) {
+        if (items == null || items.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal total = BigDecimal.ZERO;
+        for (OrderItemRequestDTO item : items) {
+            Product product = inventoryService.lockAndGetProduct(item.getProductId());
+            Variant variant = item.getVariantId() != null
+                    ? variantRepository.findById(item.getVariantId()).orElse(null)
+                    : null;
+            BigDecimal unitPrice = PricingSupport.effectiveUnitPrice(product, variant);
+            BigDecimal lineSubtotal = unitPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
+            total = total.add(discountEngine.discountForLine(
+                    product.getId(), product.getCategoryId(), lineSubtotal));
+        }
+        return total;
     }
 
     private static final BigDecimal HUNDRED = new BigDecimal("100");
@@ -360,6 +401,26 @@ public class OrderServiceImpl implements OrderService {
     // ── helpers ────────────────────────────────────────────────────────────────
 
     /**
+     * Enforces that a signed-in customer has verified their email before
+     * ordering. Guest checkout passes {@code clientId == null} and is exempt
+     * (guests have no account to verify). Throws {@link EmailNotVerifiedException}
+     * (HTTP 403) otherwise.
+     */
+    private void requireVerifiedEmail(UUID clientId) {
+        if (clientId == null) {
+            return; // guest checkout — no account to verify
+        }
+        boolean verified = usersRepository.findById(clientId)
+                .map(u -> Boolean.TRUE.equals(u.getEmailVerified()))
+                .orElse(false);
+        if (!verified) {
+            throw new EmailNotVerifiedException(
+                    "Please verify your email address before placing an order. "
+                            + "Check your inbox for the verification link or request a new one.");
+        }
+    }
+
+    /**
      * Locks each product row, validates stock, decrements inventory, publishes
      * stock-update events, and returns the running total (item cost + shipping).
      */
@@ -376,7 +437,6 @@ public class OrderServiceImpl implements OrderService {
         for (OrderItemRequestDTO item : items) {
             Product product = inventoryService.lockAndGetProduct(item.getProductId());
             int requested = item.getQuantity();
-            BigDecimal unitPrice = product.getPrice();
             Variant variant = null;
 
             if (item.getVariantId() != null) {
@@ -393,15 +453,16 @@ public class OrderServiceImpl implements OrderService {
                 if (vAvail < requested) {
                     throw new InsufficientStockException(product.getId(), requested, vAvail);
                 }
-                if (variant.getPriceOverride() != null) {
-                    unitPrice = variant.getPriceOverride();
-                }
             } else {
                 int available = inventoryService.getAvailableStock(item.getProductId());
                 if (available < requested) {
                     throw new InsufficientStockException(product.getId(), requested, available);
                 }
             }
+
+            // Canonical effective price (variant override → sale → base) — must
+            // match the checkout quote so the customer is charged what they saw.
+            BigDecimal unitPrice = PricingSupport.effectiveUnitPrice(product, variant);
 
             lockedProducts.add(product);
             lockedVariants.add(variant);
@@ -435,20 +496,18 @@ public class OrderServiceImpl implements OrderService {
             oi.setOrderId(orderId);
             oi.setProductId(item.getProductId());
             oi.setQuantity(item.getQuantity());
-            // priceAtOrder snapshot — fetch current price one more time
+            // priceAtOrder snapshot — use the same canonical effective price.
             Product p = inventoryService.lockAndGetProduct(item.getProductId());
-            oi.setPriceAtOrder(p.getPrice());
             oi.setVariantId(item.getVariantId());
+            Variant variant = item.getVariantId() != null
+                    ? variantRepository.findById(item.getVariantId()).orElse(null)
+                    : null;
+            oi.setPriceAtOrder(PricingSupport.effectiveUnitPrice(p, variant));
             // Snapshot variant attributes so order history survives later edits/deletes.
-            if (item.getVariantId() != null) {
-                variantRepository.findById(item.getVariantId()).ifPresent(v -> {
-                    oi.setVariantName(v.getName());
-                    oi.setVariantSize(v.getSize());
-                    oi.setVariantColor(v.getColor());
-                    if (v.getPriceOverride() != null) {
-                        oi.setPriceAtOrder(v.getPriceOverride());
-                    }
-                });
+            if (variant != null) {
+                // Variants are size-only — snapshot the size as the name too.
+                oi.setVariantName(variant.getSize());
+                oi.setVariantSize(variant.getSize());
             }
             orderItemRepository.save(oi);
         }
@@ -499,7 +558,6 @@ public class OrderServiceImpl implements OrderService {
         dto.setVariantId(item.getVariantId());
         dto.setVariantName(item.getVariantName());
         dto.setVariantSize(item.getVariantSize());
-        dto.setVariantColor(item.getVariantColor());
         return dto;
     }
 

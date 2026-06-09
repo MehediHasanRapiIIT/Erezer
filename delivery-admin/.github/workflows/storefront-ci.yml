@@ -1,0 +1,45 @@
+name: Storefront CI
+
+on:
+  push:
+    branches: [main, develop, "feature/**"]
+    paths:
+      - "erezer-store/**"
+      - ".github/workflows/storefront-ci.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "erezer-store/**"
+      - ".github/workflows/storefront-ci.yml"
+
+jobs:
+  build:
+    name: Build storefront
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: erezer-store
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: erezer-store/package-lock.json
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      - name: Build (production)
+        run: npm run build -- --configuration production
+
+      - name: Upload dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: storefront-dist
+          path: erezer-store/dist
+          if-no-files-found: error
+          retention-days: 7

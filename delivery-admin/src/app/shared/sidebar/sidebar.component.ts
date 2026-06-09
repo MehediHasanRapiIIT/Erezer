@@ -23,9 +23,11 @@ export class SidebarComponent {
     { label: 'Reviews',    icon: 'reviews',    route: '/reviews' },
     { label: 'Reports',    icon: 'analytics',  route: '/reports' },
     { label: 'Coupons',    icon: 'banners',    route: '/coupons' },
+    { label: 'Discounts',  icon: 'banners',    route: '/discounts' },
     { label: 'Returns',    icon: 'orders',     route: '/returns' },
     { label: 'Support',    icon: 'reviews',    route: '/support' },
     { label: 'Newsletter', icon: 'banners',    route: '/newsletter' },
     { label: 'Customers',  icon: 'customers',  route: '/customers' },
+    { label: 'Settings',   icon: 'dashboard',  route: '/settings' },
   ];
 }

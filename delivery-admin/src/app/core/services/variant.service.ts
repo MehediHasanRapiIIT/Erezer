@@ -5,8 +5,6 @@ import { environment } from '../../../environments/environment';
 
 export interface VariantRequest {
   size?: string | null;
-  color?: string | null;
-  colorHex?: string | null;
   sku?: string | null;
   stockQuantity?: number | null;
   priceOverride?: number | null;
@@ -18,8 +16,6 @@ export interface VariantResponse {
   productId: number;
   name: string | null;
   size: string | null;
-  color: string | null;
-  colorHex: string | null;
   sku: string | null;
   stockQuantity: number | null;
   priceOverride: number | null;

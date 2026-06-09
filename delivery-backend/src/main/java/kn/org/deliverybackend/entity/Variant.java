@@ -38,14 +38,6 @@ public class Variant extends AbstractBaseEntity<Long> {
     @Column(length = 16)
     private String size;
 
-    /** Display name of the colour, e.g. "Charcoal", "Midnight Navy". */
-    @Column(length = 64)
-    private String color;
-
-    /** Hex colour for the storefront swatch, e.g. "#1c1917". */
-    @Column(name = "color_hex", length = 9)
-    private String colorHex;
-
     /** Per-variant SKU; unique-per-product (enforced by DB partial unique index). */
     @Column(length = 64)
     private String sku;

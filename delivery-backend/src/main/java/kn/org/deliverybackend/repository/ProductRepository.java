@@ -17,6 +17,8 @@ import java.util.Optional;
 public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findTop10ByOrderByCreatedAtDesc();
     List<Product> findTop8ByOrderByCreatedAtDesc();
+    List<Product> findTop9ByOrderByCreatedAtDesc();
+    List<Product> findTop9ByIsNewArrivalTrueOrderByCreatedAtDesc();
     List<Product> findByNameContainingIgnoreCase(String name);
 
     @Query(value = "SELECT * FROM product WHERE category_id = :categoryId", nativeQuery = true)

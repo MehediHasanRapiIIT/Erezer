@@ -144,7 +144,7 @@
                           </div>
                           <div>
                             <p class="font-medium text-gray-800">{{ item.productName || 'Unknown Product' }}</p>
-                            @if (item.variantSize || item.variantColor || item.variantName) {
+                            @if (item.variantSize || item.variantName) {
                               <p class="text-xs text-gray-500">{{ variantLabel(item) }}</p>
                             }
                             <p class="text-xs text-gray-400 font-mono">{{ item.productId || '—' }}</p>

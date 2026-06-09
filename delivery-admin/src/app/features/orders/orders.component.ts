@@ -1,4 +1,4 @@
-import { Component, signal, computed, inject, OnInit } from '@angular/core';
+import { Component, signal, computed, inject, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { SidebarComponent } from '../../shared/sidebar/sidebar.component';
@@ -17,12 +17,16 @@ const ALL_STATUSES: OrderStatus[] = [
   imports: [FormsModule, SidebarComponent],
   templateUrl: './orders.component.html',
 })
-export class OrdersComponent implements OnInit {
+export class OrdersComponent implements OnInit, OnDestroy {
   private orderService = inject(OrderService);
   private router = inject(Router);
 
   readonly statuses = ALL_STATUSES;
   readonly pageSize = 10;
+
+  /** Auto-refresh so newly placed orders appear without a manual reload. */
+  private readonly POLL_MS = 60_000;
+  private poll?: ReturnType<typeof setInterval>;
 
   // Filter state
   filterStatus = signal<string>('ALL');
@@ -76,14 +80,33 @@ export class OrdersComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadPage(0);
+    this.loadSummary();
+    this.startPolling();
+  }
+
+  ngOnDestroy(): void {
+    if (this.poll) clearInterval(this.poll);
+  }
+
+  /** Silently re-fetch the current page + summary every POLL_MS (visible tabs only). */
+  private startPolling(): void {
+    if (typeof window === 'undefined') return;
+    this.poll = setInterval(() => {
+      if (document.visibilityState === 'hidden') return;
+      this.loadPage(this.currentPage(), true);
+      this.loadSummary();
+    }, this.POLL_MS);
+  }
+
+  private loadSummary(): void {
     this.orderService.getSummary().subscribe({
       next: (s) => this.summary.set(s),
       error: () => {},
     });
   }
 
-  loadPage(page: number): void {
-    this.isLoading.set(true);
+  loadPage(page: number, silent = false): void {
+    if (!silent) this.isLoading.set(true);
     this.errorMessage.set('');
     const status = this.filterStatus() !== 'ALL' ? this.filterStatus() : undefined;
     const { fromDate, toDate } = this.getDateRange(this.filterDate());
@@ -96,7 +119,8 @@ export class OrdersComponent implements OnInit {
         this.isLoading.set(false);
       },
       error: (err) => {
-        this.errorMessage.set(parseApiError(err));
+        // A failed background poll shouldn't wipe the table or flash an error.
+        if (!silent) this.errorMessage.set(parseApiError(err));
         this.isLoading.set(false);
       },
     });

@@ -95,32 +95,29 @@ public class VariantServiceImpl implements VariantService {
 
     private void applyFields(Variant v, VariantRequestDTO r, Product product) {
         v.setSize(trim(r.getSize()));
-        v.setColor(trim(r.getColor()));
-        v.setColorHex(trim(r.getColorHex()));
         v.setStockQuantity(r.getStockQuantity() != null ? r.getStockQuantity() : 0);
         v.setPriceOverride(r.getPriceOverride());
 
         String name = trim(r.getName());
         if (name == null) {
-            name = buildName(v.getSize(), v.getColor());
+            name = v.getSize();
         }
         v.setName(name);
 
         // SKU: use the admin's override if given, else auto-derive from the
-        // product SKU + size/color. Either way, guarantee per-product uniqueness.
+        // product SKU + size. Either way, guarantee per-product uniqueness.
         String sku = trim(r.getSku());
         if (sku == null) {
-            sku = autoSku(product, v.getSize(), v.getColor());
+            sku = autoSku(product, v.getSize());
         }
         v.setSku(ensureUniqueSku(product.getId(), sku, v.getId()));
     }
 
-    /** Derive a variant SKU like "ER-00006-M-CHARCOAL" from the product SKU + attributes. */
-    private String autoSku(Product product, String size, String color) {
+    /** Derive a variant SKU like "ER-00006-M" from the product SKU + size. */
+    private String autoSku(Product product, String size) {
         String base = product.getSku() != null ? product.getSku() : "PR-" + product.getId();
         StringBuilder sb = new StringBuilder(base);
         if (size != null)  sb.append('-').append(slug(size));
-        if (color != null) sb.append('-').append(slug(color));
         return sb.toString();
     }
 
@@ -145,13 +142,6 @@ public class VariantServiceImpl implements VariantService {
         }
     }
 
-    private String buildName(String size, String color) {
-        if (size == null && color == null) return null;
-        if (size == null) return color;
-        if (color == null) return size;
-        return size + " · " + color;
-    }
-
     private String trim(String s) {
         if (s == null) return null;
         String t = s.trim();
@@ -164,8 +154,6 @@ public class VariantServiceImpl implements VariantService {
                 .productId(v.getProductId())
                 .name(v.getName())
                 .size(v.getSize())
-                .color(v.getColor())
-                .colorHex(v.getColorHex())
                 .sku(v.getSku())
                 .stockQuantity(v.getStockQuantity())
                 .priceOverride(v.getPriceOverride())

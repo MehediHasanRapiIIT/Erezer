@@ -15,4 +15,7 @@ public class CategoryRequestDTO {
 
     @NotNull(message = "Active status is required")
     private Boolean isActive;
+
+    /** Optional image URL (uploaded via /admin/uploads/image). */
+    private String imageUrl;
 }

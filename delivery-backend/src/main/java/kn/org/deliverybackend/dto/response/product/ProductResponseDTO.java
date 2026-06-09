@@ -22,6 +22,7 @@ public class ProductResponseDTO {
     private BigDecimal discountPrice;
     private String imageUrl;
     private Boolean isAvailable;
+    private Boolean isNewArrival;
     private int stockQuantity;
     private StockStatus stockStatus;
     private double avgRating;

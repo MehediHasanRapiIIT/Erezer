@@ -7,9 +7,11 @@ import kn.org.deliverybackend.dto.coupon.CouponValidateResponseDTO;
 import kn.org.deliverybackend.dto.request.order.OrderItemRequestDTO;
 import kn.org.deliverybackend.entity.Product;
 import kn.org.deliverybackend.entity.ShippingZone;
+import kn.org.deliverybackend.entity.Variant;
 import kn.org.deliverybackend.exception.ResourceNotFoundException;
 import kn.org.deliverybackend.repository.ProductRepository;
 import kn.org.deliverybackend.repository.ShippingZoneRepository;
+import kn.org.deliverybackend.repository.VariantRepository;
 import kn.org.deliverybackend.service.CheckoutQuoteService;
 import kn.org.deliverybackend.service.CouponService;
 import kn.org.deliverybackend.service.ShippingService;
@@ -24,21 +26,33 @@ import java.math.BigDecimal;
 public class CheckoutQuoteServiceImpl implements CheckoutQuoteService {
 
     private final ProductRepository productRepository;
+    private final VariantRepository variantRepository;
     private final ShippingZoneRepository shippingZoneRepository;
     private final ShippingService shippingService;
     private final CouponService couponService;
+    private final DiscountEngine discountEngine;
 
     @Override
     @Transactional(readOnly = true)
     public CheckoutQuoteResponseDTO quote(CheckoutQuoteRequestDTO request) {
-        // 1. Sum current product prices × quantities to get the subtotal.
+        // 1. Sum current product prices × quantities to get the subtotal, and
+        //    accumulate any automatic (product/category/global) discounts per line.
         BigDecimal subtotal = BigDecimal.ZERO;
+        BigDecimal autoDiscount = BigDecimal.ZERO;
         for (OrderItemRequestDTO item : request.getItems()) {
             Product p = productRepository.findById(item.getProductId())
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Product not found: " + item.getProductId()));
-            BigDecimal unit = p.getDiscountPrice() != null ? p.getDiscountPrice() : p.getPrice();
-            subtotal = subtotal.add(unit.multiply(BigDecimal.valueOf(item.getQuantity())));
+            Variant variant = item.getVariantId() != null
+                    ? variantRepository.findById(item.getVariantId())
+                            .filter(v -> !Boolean.TRUE.equals(v.getDeleted()))
+                            .orElse(null)
+                    : null;
+            BigDecimal unit = PricingSupport.effectiveUnitPrice(p, variant);
+            BigDecimal lineSubtotal = unit.multiply(BigDecimal.valueOf(item.getQuantity()));
+            subtotal = subtotal.add(lineSubtotal);
+            autoDiscount = autoDiscount.add(
+                    discountEngine.discountForLine(p.getId(), p.getCategoryId(), lineSubtotal));
         }
 
         // 2. Resolve the shipping zone.
@@ -51,8 +65,10 @@ public class CheckoutQuoteServiceImpl implements CheckoutQuoteService {
 
         BigDecimal shippingFee = shippingService.computeFee(zone, subtotal);
 
-        // 3. Apply coupon if present.
-        BigDecimal discountAmount = BigDecimal.ZERO;
+        // 3. Apply coupon if present, on the subtotal AFTER automatic discounts.
+        BigDecimal couponBase = subtotal.subtract(autoDiscount);
+        if (couponBase.signum() < 0) couponBase = BigDecimal.ZERO;
+        BigDecimal discountAmount = autoDiscount;
         String couponDiscountType = null;
         String couponMessage = null;
         boolean couponApplied = false;
@@ -60,12 +76,12 @@ public class CheckoutQuoteServiceImpl implements CheckoutQuoteService {
 
         if (couponCode != null && !couponCode.isBlank()) {
             CouponValidateResponseDTO validation = couponService.validate(
-                    new CouponValidateRequestDTO(couponCode, subtotal, request.getUserId()));
+                    new CouponValidateRequestDTO(couponCode, couponBase, request.getUserId()));
             if (validation.isValid()) {
                 couponApplied = true;
                 couponDiscountType = validation.getDiscountType();
-                discountAmount = validation.getDiscountAmount() == null
-                        ? BigDecimal.ZERO : validation.getDiscountAmount();
+                discountAmount = discountAmount.add(validation.getDiscountAmount() == null
+                        ? BigDecimal.ZERO : validation.getDiscountAmount());
                 if (validation.isRemovesShipping()) {
                     shippingFee = BigDecimal.ZERO;
                 }
@@ -74,7 +90,7 @@ public class CheckoutQuoteServiceImpl implements CheckoutQuoteService {
             }
         }
 
-        // 4. Tax applies on (subtotal - product discount) — shipping is usually excluded.
+        // 4. Tax applies on (subtotal - total discount) — shipping is usually excluded.
         BigDecimal taxable = subtotal.subtract(discountAmount);
         if (taxable.signum() < 0) taxable = BigDecimal.ZERO;
         BigDecimal taxAmount = shippingService.computeTax(zone != null ? zone.getId() : null, taxable);

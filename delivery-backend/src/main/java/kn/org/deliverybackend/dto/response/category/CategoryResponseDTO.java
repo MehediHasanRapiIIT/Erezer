@@ -11,5 +11,6 @@ public class CategoryResponseDTO {
     private Long id;
     private String name;
     private Boolean isActive;
+    private String imageUrl;
     private long productCount;
 }

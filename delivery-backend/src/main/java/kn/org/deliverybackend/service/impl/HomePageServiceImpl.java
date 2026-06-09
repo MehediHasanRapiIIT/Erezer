@@ -53,9 +53,19 @@ public class HomePageServiceImpl implements HomePageService {
                 .map(productMapper::toResponseDTO)
                 .collect(Collectors.toList()));
 
-        // Get featured items (limit to 8)
-        List<Product> featuredItems = productRepository.findTop8ByOrderByCreatedAtDesc();
+        // Get featured items (limit to 9)
+        List<Product> featuredItems = productRepository.findTop9ByOrderByCreatedAtDesc();
         response.setFeaturedItems(featuredItems.stream()
+                .map(productMapper::toResponseDTO)
+                .collect(Collectors.toList()));
+
+        // New arrivals: admin-flagged products (limit 9). Fall back to newest 9
+        // so the section isn't empty before any product has been flagged.
+        List<Product> newArrivals = productRepository.findTop9ByIsNewArrivalTrueOrderByCreatedAtDesc();
+        if (newArrivals.isEmpty()) {
+            newArrivals = productRepository.findTop9ByOrderByCreatedAtDesc();
+        }
+        response.setNewArrivalItems(newArrivals.stream()
                 .map(productMapper::toResponseDTO)
                 .collect(Collectors.toList()));
 

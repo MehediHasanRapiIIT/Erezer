@@ -10,16 +10,17 @@ import { parseApiError } from '../../../core/utils/api-error.util';
 
 interface VariantForm {
   size: string;
-  color: string;
-  colorHex: string;
   sku: string;
   stockQuantity: number | null;
   priceOverride: number | null;
 }
 
 const EMPTY_FORM: VariantForm = {
-  size: '', color: '', colorHex: '', sku: '', stockQuantity: 0, priceOverride: null,
+  size: '', sku: '', stockQuantity: 0, priceOverride: null,
 };
+
+/** Fixed clothing sizes for this store — no colour variants. */
+const SIZE_OPTIONS = ['S', 'M', 'L', 'XL', 'XXL'];
 
 @Component({
   selector: 'app-variant-manager',
@@ -30,7 +31,7 @@ const EMPTY_FORM: VariantForm = {
       <header class="mb-3 flex items-center justify-between">
         <div>
           <h2 class="font-bold text-gray-900">Variants</h2>
-          <p class="text-xs text-gray-500">Size, colour, stock per variant. Customers must pick a variant if any exist.</p>
+          <p class="text-xs text-gray-500">Size &amp; stock per variant. Customers must pick a size if any exist.</p>
         </div>
         <button
           type="button"
@@ -48,7 +49,7 @@ const EMPTY_FORM: VariantForm = {
         <p class="text-sm text-gray-400">Loading variants…</p>
       } @else if (variants().length === 0 && !editingId() && !creating()) {
         <p class="rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-500">
-          No variants yet. Add one to expose size/colour options on the storefront.
+          No variants yet. Add one to expose size options on the storefront.
         </p>
       }
 
@@ -58,7 +59,6 @@ const EMPTY_FORM: VariantForm = {
           <thead>
             <tr class="border-b border-gray-100 bg-gray-50 text-xs uppercase text-gray-400">
               <th class="px-3 py-2 text-left">Size</th>
-              <th class="px-3 py-2 text-left">Colour</th>
               <th class="px-3 py-2 text-left">SKU</th>
               <th class="px-3 py-2 text-right">Stock</th>
               <th class="px-3 py-2 text-right">Price override</th>
@@ -69,14 +69,6 @@ const EMPTY_FORM: VariantForm = {
             @for (v of variants(); track v.id) {
               <tr [class.bg-blue-50]="editingId() === v.id">
                 <td class="px-3 py-2">{{ v.size || '—' }}</td>
-                <td class="px-3 py-2">
-                  <div class="flex items-center gap-2">
-                    @if (v.colorHex) {
-                      <span class="inline-block h-4 w-4 rounded-full border border-gray-200" [style.background-color]="v.colorHex"></span>
-                    }
-                    {{ v.color || '—' }}
-                  </div>
-                </td>
                 <td class="px-3 py-2 font-mono text-xs text-gray-600">{{ v.sku || '—' }}</td>
                 <td class="px-3 py-2 text-right">{{ v.stockQuantity ?? 0 }}</td>
                 <td class="px-3 py-2 text-right">{{ v.priceOverride != null ? '৳ ' + v.priceOverride : '—' }}</td>
@@ -99,26 +91,17 @@ const EMPTY_FORM: VariantForm = {
           <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <label class="text-xs font-medium text-gray-600">
               Size
-              <input [(ngModel)]="form.size" placeholder="M, L, XL, …"
-                class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
-            </label>
-            <label class="text-xs font-medium text-gray-600">
-              Colour
-              <input [(ngModel)]="form.color" placeholder="Charcoal"
-                class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
-            </label>
-            <label class="text-xs font-medium text-gray-600">
-              Colour hex
-              <div class="mt-1 flex items-center gap-2">
-                <input type="color" [(ngModel)]="form.colorHex"
-                  class="h-9 w-12 cursor-pointer rounded border border-gray-200" />
-                <input [(ngModel)]="form.colorHex" placeholder="#1c1917"
-                  class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
-              </div>
+              <select [(ngModel)]="form.size"
+                class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm">
+                <option value="">Select size…</option>
+                @for (s of sizeOptions; track s) {
+                  <option [value]="s">{{ s }}</option>
+                }
+              </select>
             </label>
             <label class="text-xs font-medium text-gray-600">
               SKU <span class="font-normal text-gray-400">(auto-generated if blank)</span>
-              <input [(ngModel)]="form.sku" placeholder="Auto from product SKU + size/colour"
+              <input [(ngModel)]="form.sku" placeholder="Auto from product SKU + size"
                 class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-mono" />
             </label>
             <label class="text-xs font-medium text-gray-600">
@@ -159,6 +142,7 @@ export class VariantManagerComponent implements OnChanges {
   readonly editingId = signal<number | null>(null);
   readonly error     = signal<string>('');
 
+  protected readonly sizeOptions = SIZE_OPTIONS;
   protected form: VariantForm = { ...EMPTY_FORM };
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -188,8 +172,6 @@ export class VariantManagerComponent implements OnChanges {
     this.error.set('');
     this.form = {
       size: v.size ?? '',
-      color: v.color ?? '',
-      colorHex: v.colorHex ?? '',
       sku: v.sku ?? '',
       stockQuantity: v.stockQuantity ?? 0,
       priceOverride: v.priceOverride,
@@ -207,8 +189,6 @@ export class VariantManagerComponent implements OnChanges {
     this.error.set('');
     const payload: VariantRequest = {
       size: this.form.size.trim() || null,
-      color: this.form.color.trim() || null,
-      colorHex: this.form.colorHex.trim() || null,
       sku: this.form.sku.trim() || null,
       stockQuantity: this.form.stockQuantity ?? 0,
       priceOverride: this.form.priceOverride,

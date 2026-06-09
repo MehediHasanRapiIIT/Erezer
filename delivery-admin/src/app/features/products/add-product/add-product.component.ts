@@ -26,6 +26,7 @@ export class AddProductComponent implements OnInit {
   categoryId   = signal<number | null>(null);
   shopId       = signal(1);
   isAvailable  = signal(true);
+  isNewArrival = signal(false);
 
   // State
   categories   = signal<CategoryResponse[]>([]);
@@ -72,6 +73,7 @@ export class AddProductComponent implements OnInit {
       categoryId: this.categoryId()!,
       shopId: this.shopId(),
       isAvailable: this.isAvailable(),
+      isNewArrival: this.isNewArrival(),
     };
 
     this.isLoading.set(true);

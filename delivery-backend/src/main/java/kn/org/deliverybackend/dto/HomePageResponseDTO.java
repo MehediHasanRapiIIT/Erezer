@@ -24,4 +24,7 @@ public class HomePageResponseDTO {
 
     @Schema(description = "List of featured items")
     private List<ProductResponseDTO> featuredItems;
+
+    @Schema(description = "List of admin-flagged new-arrival items")
+    private List<ProductResponseDTO> newArrivalItems;
 }

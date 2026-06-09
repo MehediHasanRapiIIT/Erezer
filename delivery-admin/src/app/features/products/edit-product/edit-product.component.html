@@ -236,6 +236,10 @@
                       <span class="text-sm text-gray-700">Unavailable</span>
                     </label>
                   </div>
+                  <label class="mt-4 flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" [ngModel]="isNewArrival()" (ngModelChange)="isNewArrival.set($event)" class="accent-blue-600"/>
+                    <span class="text-sm text-gray-700">Show in <strong>New arrivals</strong> on the home page</span>
+                  </label>
                 </div>
               </div>
             </div>

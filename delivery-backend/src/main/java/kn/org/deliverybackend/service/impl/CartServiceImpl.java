@@ -92,19 +92,15 @@ public class CartServiceImpl implements CartService {
         if (variant == null) {
             return product.getName();
         }
-        String label = variant.getName();
+        // Variants are size-only — label by size, ignoring any legacy colour
+        // that may be baked into the stored variant name.
+        String label = variant.getSize();
         if (label == null || label.isBlank()) {
-            StringBuilder sb = new StringBuilder();
-            if (variant.getSize() != null && !variant.getSize().isBlank()) {
-                sb.append(variant.getSize());
-            }
-            if (variant.getColor() != null && !variant.getColor().isBlank()) {
-                if (sb.length() > 0) sb.append(" / ");
-                sb.append(variant.getColor());
-            }
-            label = sb.toString();
+            label = variant.getName();
         }
-        return label.isBlank() ? product.getName() : product.getName() + " — " + label;
+        return (label == null || label.isBlank())
+                ? product.getName()
+                : product.getName() + " — " + label;
     }
 
     @Override

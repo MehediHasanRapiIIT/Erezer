@@ -1,0 +1,54 @@
+name: Admin CI
+
+on:
+  push:
+    branches: [main, develop, "feature/**"]
+    paths:
+      - "src/**"
+      - "angular.json"
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig*.json"
+      - "tailwind.config.js"
+      - "postcss.config.json"
+      - ".github/workflows/admin-ci.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "src/**"
+      - "angular.json"
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig*.json"
+      - "tailwind.config.js"
+      - "postcss.config.json"
+      - ".github/workflows/admin-ci.yml"
+
+jobs:
+  build:
+    name: Build admin
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      - name: Build (production)
+        run: npm run build -- --configuration production
+
+      - name: Upload dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-dist
+          path: dist
+          if-no-files-found: error
+          retention-days: 7

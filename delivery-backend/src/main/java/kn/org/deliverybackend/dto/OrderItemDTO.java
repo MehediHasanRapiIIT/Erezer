@@ -31,6 +31,4 @@ public class OrderItemDTO {
     private String variantName;
 
     private String variantSize;
-
-    private String variantColor;
 }

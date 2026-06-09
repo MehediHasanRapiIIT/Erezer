@@ -4,12 +4,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import kn.org.deliverybackend.dto.returns.ReturnRequestCreateDTO;
 import kn.org.deliverybackend.dto.returns.ReturnRequestDTO;
+import kn.org.deliverybackend.exception.ForbiddenAccessException;
 import kn.org.deliverybackend.exception.InvalidStockOperationException;
 import kn.org.deliverybackend.service.ReturnService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -37,6 +40,7 @@ public class ReturnController {
             @RequestParam("orderId") UUID orderId,
             @RequestPart("body") String body,
             @RequestPart(value = "photos", required = false) List<MultipartFile> photos) {
+        assertSelf(userId);
         ReturnRequestCreateDTO request;
         try {
             request = objectMapper.readValue(body, ReturnRequestCreateDTO.class);
@@ -50,6 +54,7 @@ public class ReturnController {
 
     @GetMapping
     public ResponseEntity<List<ReturnRequestDTO>> listMine(@PathVariable UUID userId) {
+        assertSelf(userId);
         return ResponseEntity.ok(returnService.listMine(userId));
     }
 
@@ -57,6 +62,20 @@ public class ReturnController {
     public ResponseEntity<ReturnRequestDTO> getMine(
             @PathVariable UUID userId,
             @PathVariable UUID returnId) {
+        assertSelf(userId);
         return ResponseEntity.ok(returnService.getMine(userId, returnId));
+    }
+
+    /**
+     * Ensures the {@code {userId}} in the path matches the authenticated customer
+     * (the JWT subject set by {@code CustomerJwtAuthFilter}) — so a signed-in user
+     * can't read or create returns under someone else's id.
+     */
+    private void assertSelf(UUID userId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String principal = auth != null ? String.valueOf(auth.getPrincipal()) : null;
+        if (principal == null || !principal.equals(userId.toString())) {
+            throw new ForbiddenAccessException("You can only access your own returns.");
+        }
     }
 }

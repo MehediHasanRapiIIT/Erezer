@@ -53,6 +53,7 @@ export class ProductService {
     }
     formData.append('shopId', String(dto.shopId));
     formData.append('isAvailable', String(dto.isAvailable));
+    if (dto.isNewArrival != null)      formData.append('isNewArrival', String(dto.isNewArrival));
     if (dto.unit != null)              formData.append('unit', dto.unit);
     if (dto.lowStockThreshold != null) formData.append('lowStockThreshold', String(dto.lowStockThreshold));
     if (dto.brand != null)             formData.append('brand', dto.brand);

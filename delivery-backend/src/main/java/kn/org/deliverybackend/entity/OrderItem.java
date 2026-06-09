@@ -34,6 +34,4 @@ public class OrderItem extends AbstractBaseEntity<UUID> {
     private String variantName;
 
     private String variantSize;
-
-    private String variantColor;
 }

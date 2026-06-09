@@ -48,6 +48,7 @@ public class CategoryServiceImpl implements CategoryService {
                 .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
         category.setName(categoryRequestDTO.getName());
         category.setIsActive(categoryRequestDTO.getIsActive());
+        category.setImageUrl(categoryRequestDTO.getImageUrl());
         return toEnrichedDTO(categoryRepository.save(category));
     }
 

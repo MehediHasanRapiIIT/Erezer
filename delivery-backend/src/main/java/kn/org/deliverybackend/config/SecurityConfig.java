@@ -88,6 +88,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/payments/bkash/**").permitAll()
                         .requestMatchers("/api/support/contact").permitAll()
                         .requestMatchers("/api/newsletter/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/store-settings").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/discounts/active").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
 
@@ -99,7 +101,9 @@ public class SecurityConfig {
                         // Authenticated customer endpoints
                         .requestMatchers("/app/consumer/**").authenticated()
 
-                        .anyRequest().permitAll()
+                        // Default-deny: anything not explicitly allowed above is
+                        // rejected rather than silently public.
+                        .anyRequest().denyAll()
                 )
                 // Install our custom JWT filter before the standard auth filter so
                 // tokens minted by JwtTokenProvider populate the SecurityContext.

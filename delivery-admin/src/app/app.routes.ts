@@ -94,6 +94,18 @@ export const routes: Routes = [
       import('./features/coupons/coupons.component').then((m) => m.CouponsComponent),
   },
   {
+    path: 'discounts',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/discounts/discounts.component').then((m) => m.DiscountsComponent),
+  },
+  {
+    path: 'settings',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/settings/store-settings.component').then((m) => m.StoreSettingsComponent),
+  },
+  {
     path: 'returns',
     canActivate: [authGuard],
     loadComponent: () =>

@@ -244,13 +244,10 @@ export class OrderDetailComponent implements OnInit {
     return id ? '#' + id.slice(0, 8).toUpperCase() : '—';
   }
 
-  /** "Size M · Charcoal" style label from an order line's snapshotted variant. */
+  /** "Size M" label from an order line's snapshotted variant (size-only). */
   variantLabel(item: OrderItem): string {
-    const parts: string[] = [];
-    if (item.variantSize)  parts.push(`Size ${item.variantSize}`);
-    if (item.variantColor) parts.push(item.variantColor);
-    if (parts.length === 0 && item.variantName) parts.push(item.variantName);
-    return parts.join(' · ');
+    if (item.variantSize) return `Size ${item.variantSize}`;
+    return item.variantName ?? '';
   }
 
   subtotal(): number {

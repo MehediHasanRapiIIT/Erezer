@@ -17,12 +17,6 @@ public class VariantRequestDTO {
     private String size;
 
     @Size(max = 64)
-    private String color;
-
-    @Size(max = 9)
-    private String colorHex;
-
-    @Size(max = 64)
     private String sku;
 
     @PositiveOrZero

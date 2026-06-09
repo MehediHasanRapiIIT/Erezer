@@ -44,6 +44,9 @@ public class ProductRequestDTO {
     @Min(value = 0, message = "Low stock threshold must be >= 0")
     private Integer lowStockThreshold;
 
+    /** Admin flag: show on the home "New arrivals" section. */
+    private Boolean isNewArrival;
+
     // Clothing attributes (Phase 3 catalog). All optional.
     private String brand;
     private String gender;
