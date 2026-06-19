@@ -39,6 +39,7 @@ public class CheckoutQuoteServiceImpl implements CheckoutQuoteService {
         //    accumulate any automatic (product/category/global) discounts per line.
         BigDecimal subtotal = BigDecimal.ZERO;
         BigDecimal autoDiscount = BigDecimal.ZERO;
+        BigDecimal customSurcharge = BigDecimal.ZERO;
         for (OrderItemRequestDTO item : request.getItems()) {
             Product p = productRepository.findById(item.getProductId())
                     .orElseThrow(() -> new ResourceNotFoundException(
@@ -53,6 +54,11 @@ public class CheckoutQuoteServiceImpl implements CheckoutQuoteService {
             subtotal = subtotal.add(lineSubtotal);
             autoDiscount = autoDiscount.add(
                     discountEngine.discountForLine(p.getId(), p.getCategoryId(), lineSubtotal));
+            // Flat custom-size surcharge (server-authoritative) for made-to-order lines.
+            if (item.getCustomMeasurements() != null && !item.getCustomMeasurements().isBlank()
+                    && Boolean.TRUE.equals(p.getCustomSizeEnabled()) && p.getCustomSizeSurcharge() != null) {
+                customSurcharge = customSurcharge.add(p.getCustomSizeSurcharge());
+            }
         }
 
         // 2. Resolve the shipping zone.
@@ -98,7 +104,8 @@ public class CheckoutQuoteServiceImpl implements CheckoutQuoteService {
         BigDecimal total = subtotal
                 .subtract(discountAmount)
                 .add(shippingFee)
-                .add(taxAmount);
+                .add(taxAmount)
+                .add(customSurcharge);
         if (total.signum() < 0) total = BigDecimal.ZERO;
 
         return CheckoutQuoteResponseDTO.builder()
@@ -106,6 +113,7 @@ public class CheckoutQuoteServiceImpl implements CheckoutQuoteService {
                 .shippingFee(shippingFee)
                 .taxAmount(taxAmount)
                 .discountAmount(discountAmount)
+                .customSurcharge(customSurcharge)
                 .total(total)
                 .shippingZoneId(zone != null ? zone.getId() : null)
                 .shippingZoneName(zone != null ? zone.getDisplayName() : null)

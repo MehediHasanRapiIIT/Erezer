@@ -24,6 +24,11 @@ export interface CartItem {
   unitPrice: number;
   name: string;
   image: string | null;
+  // Custom (made-to-order) sizing. customMeasurements is a JSON string sent to
+  // the backend; customSurcharge is the flat per-line fee (display only — the
+  // server re-derives it authoritatively from the product).
+  customMeasurements?: string | null;
+  customSurcharge?: number | null;
 }
 
 export interface UserProfile {

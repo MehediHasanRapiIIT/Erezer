@@ -197,7 +197,10 @@ export class EcommerceStore {
    * Replace the local cart with items fetched from the API.
    */
   loadApiCart(apiItems: ApiCartItem[]): void {
-    this.cart.set(apiItems.map((i) => this.fromApiCartItem(i)));
+    // Custom (made-to-order) lines live only in the local cart (the server cart
+    // doesn't model measurements) — preserve them across a server refresh.
+    const customLocal = this.cart().filter((i) => i.customMeasurements);
+    this.cart.set([...apiItems.map((i) => this.fromApiCartItem(i)), ...customLocal]);
   }
 
   /**
@@ -296,7 +299,10 @@ export class EcommerceStore {
     productId: string,
     size: string,
     quantity = 1,
-    meta?: { variantId?: number | null; unitPrice?: number; name?: string; image?: string | null },
+    meta?: {
+      variantId?: number | null; unitPrice?: number; name?: string; image?: string | null;
+      customMeasurements?: string | null; customSurcharge?: number | null;
+    },
   ): void {
     this.cart.update((items) => {
       const product = this.products().find((p) => p.id === productId);
@@ -305,15 +311,21 @@ export class EcommerceStore {
       const unitPrice = meta?.unitPrice ?? product.price;
       const name      = meta?.name ?? product.name;
       const image     = meta?.image ?? product.image;
-      const existing = items.find((i) => i.productId === productId && i.variantId === variantId && i.size === size);
-      if (existing) {
-        return items.map((i) =>
-          i === existing
-            ? { ...i, quantity: Math.min(product.inStock, i.quantity + quantity) }
-            : i
-        );
+      const customMeasurements = meta?.customMeasurements ?? null;
+      const customSurcharge    = meta?.customSurcharge ?? null;
+      // Custom (made-to-order) lines are always distinct — never merge them, so
+      // each set of measurements stays separate.
+      if (!customMeasurements) {
+        const existing = items.find((i) => i.productId === productId && i.variantId === variantId && i.size === size && !i.customMeasurements);
+        if (existing) {
+          return items.map((i) =>
+            i === existing
+              ? { ...i, quantity: Math.min(product.inStock, i.quantity + quantity) }
+              : i
+          );
+        }
       }
-      return [...items, { productId, variantId, size, quantity: Math.min(product.inStock, quantity), unitPrice, name, image }];
+      return [...items, { productId, variantId, size, quantity: Math.min(product.inStock, quantity), unitPrice, name, image, customMeasurements, customSurcharge }];
     });
   }
 

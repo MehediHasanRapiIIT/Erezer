@@ -17,6 +17,7 @@ public class CheckoutQuoteResponseDTO {
     private BigDecimal shippingFee;
     private BigDecimal taxAmount;
     private BigDecimal discountAmount;
+    private BigDecimal customSurcharge; // flat custom-size fee(s), added after discounts
     private BigDecimal total;
 
     private Long shippingZoneId;

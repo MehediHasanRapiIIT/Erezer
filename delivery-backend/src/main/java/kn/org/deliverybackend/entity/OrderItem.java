@@ -34,4 +34,13 @@ public class OrderItem extends AbstractBaseEntity<UUID> {
     private String variantName;
 
     private String variantSize;
+
+    // ── Custom (made-to-order) sizing ──────────────────────────────────────────
+    /** JSON of the customer's measurements, e.g. {"Chest":38,"Length":40,"comments":"…"}. */
+    @Column(name = "custom_measurements", length = 2000)
+    private String customMeasurements;
+
+    /** Flat surcharge applied to this line for custom sizing (snapshot of product config). */
+    @Column(name = "custom_surcharge", precision = 12, scale = 2)
+    private BigDecimal customSurcharge;
 }

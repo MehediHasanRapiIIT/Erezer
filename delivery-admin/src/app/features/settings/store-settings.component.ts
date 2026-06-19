@@ -136,7 +136,9 @@ const EMPTY_MARQUEE: Marquee = { enabled: true, items: [] };
                             <input [(ngModel)]="chart.columns[$index]"
                               class="w-28 rounded border border-gray-200 px-2 py-1 text-xs" />
                             <button type="button" (click)="removeColumn($index)"
-                              class="text-red-400 hover:text-red-600" title="Remove column">×</button>
+                              class="act-btn-icon" title="Remove column">
+                              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
                           </div>
                         </th>
                       }
@@ -163,8 +165,10 @@ const EMPTY_MARQUEE: Marquee = { enabled: true, items: [] };
                           </td>
                         }
                         <td class="px-2 py-2 text-right">
-                          <button type="button" (click)="removeRow(ri)"
-                            class="text-xs text-red-500 underline">Remove</button>
+                          <button type="button" (click)="removeRow(ri)" class="act-btn act-btn-delete" title="Remove row">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+                            Remove
+                          </button>
                         </td>
                       </tr>
                     } @empty {
@@ -229,7 +233,9 @@ const EMPTY_MARQUEE: Marquee = { enabled: true, items: [] };
                   <div class="flex items-center gap-2">
                     <input [(ngModel)]="brand.images[i]" placeholder="https://…"
                       class="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm font-mono" />
-                    <button type="button" (click)="removeBrandImage(i)" class="text-xs text-red-500 underline">Remove</button>
+                    <button type="button" (click)="removeBrandImage(i)" class="act-btn-icon shrink-0" title="Remove image">
+                      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+                    </button>
                   </div>
                 } @empty {
                   <p class="text-xs text-gray-400">No images yet.</p>
@@ -298,7 +304,9 @@ const EMPTY_MARQUEE: Marquee = { enabled: true, items: [] };
                     <div class="flex items-center gap-2">
                       <input [(ngModel)]="col.title" placeholder="Column title"
                         class="flex-1 rounded border border-gray-200 px-2 py-1 text-xs font-semibold" />
-                      <button type="button" (click)="removeFooterColumn(ci)" class="text-xs text-red-500 underline">Delete</button>
+                      <button type="button" (click)="removeFooterColumn(ci)" class="act-btn-icon shrink-0" title="Delete column">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+                      </button>
                     </div>
                     @for (link of col.links; track $index; let li = $index) {
                       <div class="flex items-center gap-1">
@@ -379,7 +387,10 @@ const EMPTY_MARQUEE: Marquee = { enabled: true, items: [] };
                               (change)="onOutletImage($event, oi)" />
                           </label>
                         </div>
-                        <button type="button" (click)="removeOutlet(oi)" class="text-xs text-red-500 underline">Delete</button>
+                        <button type="button" (click)="removeOutlet(oi)" class="act-btn act-btn-delete shrink-0" title="Delete outlet">
+                          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+                          Delete
+                        </button>
                       </div>
                       <input [(ngModel)]="o.address" placeholder="Address"
                         class="w-full rounded border border-gray-200 px-2 py-1 text-xs" />
@@ -426,7 +437,9 @@ const EMPTY_MARQUEE: Marquee = { enabled: true, items: [] };
                   <div class="flex items-center gap-2">
                     <input [(ngModel)]="marquee.items[i]" placeholder="Free shipping over ৳2000"
                       class="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm" />
-                    <button type="button" (click)="removeMarqueeItem(i)" class="text-xs text-red-500 underline">Remove</button>
+                    <button type="button" (click)="removeMarqueeItem(i)" class="act-btn-icon shrink-0" title="Remove phrase">
+                      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+                    </button>
                   </div>
                 } @empty {
                   <p class="text-xs text-gray-400">No phrases yet.</p>

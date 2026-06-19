@@ -34,4 +34,9 @@ public class ProductResponseDTO {
     private String gender;
     private String material;
     private String careInstructions;
+
+    // Custom (made-to-order) sizing
+    private Boolean customSizeEnabled;
+    private BigDecimal customSizeSurcharge;
+    private String customSizeNote;
 }

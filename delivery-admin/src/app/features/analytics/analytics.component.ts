@@ -12,7 +12,6 @@ interface CategoryRevenue { categoryName: string; revenue: number; orderCount: n
 interface AnalyticsData {
   totalRevenue: number;
   totalOrders: number;
-  activeRiders: number;
   cancelledOrders: number;
   completedOrders: number;
   pendingOrders: number;
@@ -22,15 +21,11 @@ interface AnalyticsData {
   stockCriticalLow: number;
   stockOutOfStock: number;
   stockReorderPending: number;
-  totalRiders: number;
-  inactiveRiders: number;
-  avgRiderRating: number;
   ordersByStatus: { status: string; count: number }[];
   ordersByPayment: { method: string; count: number; revenue: number }[];
   dailyOrders: DailyOrder[];
   topCategories: CategoryRevenue[];
   topProducts: { id: number; name: string; imageUrl: string; price: number; stockQuantity: number; stockStatus: string }[];
-  topRiders: { id: string; name: string; imageUrl: string; status: string; rating: number; totalDeliveries: number }[];
 }
 
 @Component({
@@ -139,10 +134,6 @@ export class AnalyticsComponent implements OnInit {
     if (status === 'IN_STOCK') return 'bg-emerald-100 text-emerald-700';
     if (status === 'LOW_STOCK') return 'bg-yellow-100 text-yellow-700';
     return 'bg-red-100 text-red-600';
-  }
-
-  riderStatusClass(status: string): string {
-    return status?.toUpperCase() === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500';
   }
 
   dayLabel(dateStr: string): string {

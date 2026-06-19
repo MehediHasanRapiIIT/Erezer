@@ -31,4 +31,9 @@ public class OrderItemDTO {
     private String variantName;
 
     private String variantSize;
+
+    // Custom (made-to-order) sizing — measurements JSON + applied surcharge.
+    private String customMeasurements;
+
+    private BigDecimal customSurcharge;
 }

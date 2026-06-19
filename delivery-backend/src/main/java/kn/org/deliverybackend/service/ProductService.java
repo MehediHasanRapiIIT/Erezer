@@ -13,6 +13,9 @@ public interface ProductService {
     List<ProductResponseDTO> getAllProducts();
     Page<ProductResponseDTO> getProductsPaged(int page, int size);
     ProductResponseDTO getProductById(Long id);
+
+    /** Enriched DTOs for the given ids, preserving order and skipping any not found. */
+    List<ProductResponseDTO> getProductsByIds(List<Long> ids);
     ProductResponseDTO createProduct(ProductRequestDTO productRequestDTO, MultipartFile image);
     ProductResponseDTO updateProduct(Long id, ProductRequestDTO productRequestDTO, MultipartFile image);
     void deleteProduct(Long id);

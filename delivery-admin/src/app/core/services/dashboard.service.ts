@@ -7,7 +7,6 @@ import { HomeResponse } from '../models/api.models';
 export interface DashboardStats {
   totalOrders: number;
   totalRevenue: number;
-  activeRiders: number;
   pendingOrders: number;
 }
 

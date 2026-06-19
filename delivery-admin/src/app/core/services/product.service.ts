@@ -60,6 +60,9 @@ export class ProductService {
     if (dto.gender != null)            formData.append('gender', dto.gender);
     if (dto.material != null)          formData.append('material', dto.material);
     if (dto.careInstructions != null)  formData.append('careInstructions', dto.careInstructions);
+    if (dto.customSizeEnabled != null)   formData.append('customSizeEnabled', String(dto.customSizeEnabled));
+    if (dto.customSizeSurcharge != null) formData.append('customSizeSurcharge', String(dto.customSizeSurcharge));
+    if (dto.customSizeNote != null)      formData.append('customSizeNote', dto.customSizeNote);
     if (image) {
       formData.append('image', image);
     }

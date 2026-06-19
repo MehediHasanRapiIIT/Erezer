@@ -17,6 +17,7 @@ export const en: Record<string, string> = {
   // Header
   'header.home':       'Home',
   'header.shop':       'Shop',
+  'header.flash_sale': 'Flash Sale',
   'header.cart':       'Cart',
   'header.wishlist':   'Wishlist',
   'header.account':    'Account',
@@ -73,6 +74,7 @@ export const en: Record<string, string> = {
 export const bn: Record<string, string> = {
   'header.home':       'হোম',
   'header.shop':       'শপ',
+  'header.flash_sale': 'ফ্ল্যাশ সেল',
   'header.cart':       'কার্ট',
   'header.wishlist':   'উইশলিস্ট',
   'header.account':    'অ্যাকাউন্ট',

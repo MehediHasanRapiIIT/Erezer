@@ -78,7 +78,13 @@ import { RevealDirective } from '../core/reveal.directive';
                   <div class="min-w-0">
                     <a [routerLink]="['/product', item.product.id]"
                       class="font-medium underline-offset-4 hover:underline">{{ item.product.name }}</a>
-                    <p class="mt-1 text-xs uppercase tracking-wider app-muted">Size: {{ item.size }}</p>
+                    <p class="mt-1 text-xs uppercase tracking-wider app-muted">Size: {{ item.customMeasurements ? 'Custom' : item.size }}</p>
+                    @if (item.customMeasurements) {
+                      <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                        ✂ {{ customText(item.customMeasurements) }}
+                        @if (item.customSurcharge) { <span class="text-neutral-400">(+{{ item.customSurcharge | currency:'BDT':'৳' }})</span> }
+                      </p>
+                    }
                   </div>
                   <p class="shrink-0 font-semibold">{{ item.subtotal | currency:'BDT':'৳' }}</p>
                 </div>
@@ -192,6 +198,20 @@ export class CartPage implements OnInit {
 
   /** Distinct line items in the cart. */
   protected readonly itemCount = computed(() => this.store.cartItemsDetailed().length);
+
+  /** Render the custom-measurements JSON as readable text for the cart line. */
+  protected customText(json: string | null | undefined): string {
+    if (!json) return '';
+    try {
+      const data = JSON.parse(json) as Record<string, unknown>;
+      return Object.entries(data)
+        .filter(([, v]) => v != null && v !== '')
+        .map(([k, v]) => `${k === 'comments' ? 'Notes' : k}: ${v}`)
+        .join(' · ');
+    } catch {
+      return '';
+    }
+  }
 
   protected readonly effectiveDiscount = computed(() => {
     const c = this.appliedCoupon();

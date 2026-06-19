@@ -100,6 +100,12 @@ export const routes: Routes = [
       import('./features/discounts/discounts.component').then((m) => m.DiscountsComponent),
   },
   {
+    path: 'flash-sales',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/flash-sale/flash-sale.component').then((m) => m.FlashSaleComponent),
+  },
+  {
     path: 'settings',
     canActivate: [authGuard],
     loadComponent: () =>

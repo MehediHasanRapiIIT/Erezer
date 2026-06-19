@@ -70,6 +70,19 @@ public class Product extends AbstractBaseEntity<Long> {
     @Column(name = "care_instructions", length = 2000)
     private String careInstructions;
 
+    // ── Custom (made-to-order) sizing ──────────────────────────────────────────
+    /** When true, the storefront offers a "Custom" size with measurement inputs. */
+    @Column(name = "custom_size_enabled")
+    private Boolean customSizeEnabled;
+
+    /** Flat surcharge added once per custom-size order line (e.g. 70 BDT). */
+    @Column(name = "custom_size_surcharge", precision = 12, scale = 2)
+    private BigDecimal customSizeSurcharge;
+
+    /** Admin-set note shown on the custom panel, e.g. "Enter Custom Measurements". */
+    @Column(name = "custom_size_note", length = 255)
+    private String customSizeNote;
+
     @PostPersist
     public void generateSku() {
         if (this.sku == null) {

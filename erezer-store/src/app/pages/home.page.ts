@@ -7,6 +7,7 @@ import { ApiService } from '../core/api.service';
 import { ApiBanner, ApiBrandStory, ApiCategory, ApiHighlight, ApiMarquee, ApiProduct } from '../core/api.models';
 import { SettingsStore } from '../core/store/settings.store';
 import { ProductCardComponent } from '../components/shared/product-card.component';
+import { FlashSaleWidgetComponent } from '../components/shared/flash-sale-widget.component';
 import { RecentlyViewedComponent } from '../components/shared/recently-viewed.component';
 import { TranslatePipe } from '../core/i18n/translate.pipe';
 import { EcommerceStore } from '../core/store/ecommerce.store';
@@ -15,7 +16,7 @@ import { CountUpDirective } from '../core/count-up.directive';
 
 @Component({
   standalone: true,
-  imports: [RouterLink, ProductCardComponent, FormsModule, RecentlyViewedComponent, TranslatePipe, RevealDirective, CountUpDirective, NgTemplateOutlet],
+  imports: [RouterLink, ProductCardComponent, FlashSaleWidgetComponent, FormsModule, RecentlyViewedComponent, TranslatePipe, RevealDirective, CountUpDirective, NgTemplateOutlet],
   template: `
     <!-- ── Cinematic hero ──────────────────────────────────────────────────── -->
     <section class="relative left-1/2 -mt-10 mb-16 h-[88svh] min-h-[34rem] w-screen -translate-x-1/2 overflow-hidden bg-black">
@@ -88,6 +89,11 @@ import { CountUpDirective } from '../core/count-up.directive';
         </div>
       }
     </section>
+
+    <!-- ── Flash sale promo (time-boxed; self-hides when none active) ───────── -->
+    <div class="mb-16" appReveal>
+      <app-flash-sale-widget />
+    </div>
 
     <!-- ── Shop by category (lookbook) ─────────────────────────────────────── -->
     @if (collectionTiles().length > 0) {

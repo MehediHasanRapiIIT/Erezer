@@ -8,6 +8,7 @@ import {
   ApiCartItem,
   ApiCartResponse,
   ApiActiveDiscount,
+  ApiFlashSale,
   ApiResponse,
   ApiCartValidation,
   ApiCategory,
@@ -154,6 +155,25 @@ export class ApiService {
 
   getActiveDiscounts(): Observable<ApiActiveDiscount[]> {
     return this.http.get<ApiActiveDiscount[]>(`${BASE}/api/discounts/active`);
+  }
+
+  /**
+   * The currently-running flash sale, or null when none is active (the backend
+   * may answer 204/empty — normalise that to null so callers can `@if` on it).
+   */
+  getFlashSale(): Observable<ApiFlashSale | null> {
+    return this.http.get<ApiFlashSale | null>(`${BASE}/api/flash-sale`)
+      .pipe(map((sale) => (sale && sale.id ? sale : null)));
+  }
+
+  /** All currently-active flash sales (for the "view all deals" list page). */
+  getFlashSales(): Observable<ApiFlashSale[]> {
+    return this.http.get<ApiFlashSale[]>(`${BASE}/api/flash-sales`);
+  }
+
+  /** One active flash sale by id (for its detail page). */
+  getFlashSaleById(id: string): Observable<ApiFlashSale> {
+    return this.http.get<ApiFlashSale>(`${BASE}/api/flash-sales/${id}`);
   }
 
   // ─── Cart ──────────────────────────────────────────────────────────────────

@@ -38,6 +38,10 @@ export interface ProductRequest {
   gender?: string;
   material?: string;
   careInstructions?: string;
+  // Custom (made-to-order) sizing
+  customSizeEnabled?: boolean;
+  customSizeSurcharge?: number | null;
+  customSizeNote?: string | null;
 }
 
 export interface ProductResponse {
@@ -62,6 +66,10 @@ export interface ProductResponse {
   gender: string | null;
   material: string | null;
   careInstructions: string | null;
+  // Custom (made-to-order) sizing
+  customSizeEnabled: boolean | null;
+  customSizeSurcharge: number | null;
+  customSizeNote: string | null;
 }
 
 // --- Stock ---
@@ -145,12 +153,13 @@ export interface OrderItem {
   variantId: number | null;
   variantName: string | null;
   variantSize: string | null;
+  customMeasurements: string | null;
+  customSurcharge: number | null;
 }
 
 export interface OrderResponse {
   id: string;
   clientId: string;
-  riderId: string | null;
   deliveryAddress: string;
   totalAmount: number;
   paymentMethod: string;
@@ -164,12 +173,6 @@ export interface OrderResponse {
   orderItems: OrderItem[];
   customerName: string | null;
   customerPhone: string | null;
-  riderName: string | null;
-  riderPhone: string | null;
-  riderImageUrl: string | null;
-  riderVehicleType: string | null;
-  riderPlateNumber: string | null;
-  riderRating: number | null;
 
   // Phase 2 additive fields
   courierName?: string | null;
@@ -264,7 +267,6 @@ export type SearchItemType =
   | 'CATEGORY'
   | 'ORDER'
   | 'CUSTOMER'
-  | 'RIDER'
   | 'REVIEW'
   | 'SHOP'
   | 'BANNER';
@@ -289,7 +291,6 @@ export interface AdminSearchResponse {
   categories: SearchGroup;
   orders: SearchGroup;
   customers: SearchGroup;
-  riders: SearchGroup;
   reviews: SearchGroup;
   totalCount: number;
 }

@@ -84,6 +84,11 @@ export interface ApiProduct {
   avgRating?: number;
   totalReviews?: number;
   stockQuantity?: number;
+
+  // Custom (made-to-order) sizing
+  customSizeEnabled?: boolean | null;
+  customSizeSurcharge?: number | null;
+  customSizeNote?: string | null;
 }
 
 // ─── Variants & images (Phase 3) ────────────────────────────────────────────
@@ -261,6 +266,8 @@ export interface OrderItemPayload {
   productId: number;
   quantity: number;
   variantId: number | null;
+  /** JSON of custom (made-to-order) measurements; present only for custom lines. */
+  customMeasurements?: string | null;
 }
 
 export interface CreateOrderPayload {
@@ -319,6 +326,7 @@ export interface CheckoutQuoteResponse {
   shippingFee: number;
   taxAmount: number;
   discountAmount: number;
+  customSurcharge?: number | null;
   total: number;
   shippingZoneId: number | null;
   shippingZoneName: string | null;
@@ -607,4 +615,32 @@ export interface ApiActiveDiscount {
   targetId: number | null;
   stackable: boolean;
   priority: number;
+}
+
+// ─── Flash sale (time-boxed promotional campaign) ────────────────────────────
+
+/**
+ * A single, currently-running flash-sale campaign surfaced by
+ * {@code GET /api/flash-sale}. The endpoint returns the active campaign, or an
+ * empty body / 204 when none is running (the storefront then hides the widget
+ * and the Flash Sale page falls back to an empty state).
+ *
+ * `discountType`/`discountValue` describe the headline offer ("20% OFF on all
+ * items"); `products` are the items included in the sale, each carrying its own
+ * `price`/`discountPrice` so cards can show the strike-through. `endsAt` is an
+ * ISO-8601 instant that drives the live countdown. `couponCode`/`minSpend`
+ * power the optional "copy code" banner.
+ */
+export interface ApiFlashSale {
+  id: string;
+  name: string;                       // e.g. "Black Friday"
+  label: string | null;              // small eyebrow, e.g. "Limited time"
+  discountType: ApiDiscountType;     // PERCENT | FLAT
+  discountValue: number;             // 20 (percent) or 50 (flat ৳)
+  endsAt: string;                    // ISO-8601 — countdown target
+  startsAt?: string | null;
+  couponCode?: string | null;        // optional "copy code" pill
+  minSpend?: number | null;          // optional min order for the coupon
+  featured?: boolean | null;         // shown in the landing-page widget
+  products: ApiProduct[];
 }

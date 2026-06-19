@@ -250,6 +250,23 @@ export class OrderDetailComponent implements OnInit {
     return item.variantName ?? '';
   }
 
+  /** Render the custom-measurements JSON ("{"Chest":38,"Length":40,"comments":"…"}") as readable text. */
+  customMeasurementText(item: OrderItem): string {
+    if (!item.customMeasurements) return '';
+    try {
+      const data = JSON.parse(item.customMeasurements) as Record<string, unknown>;
+      const parts: string[] = [];
+      for (const [key, value] of Object.entries(data)) {
+        if (value == null || value === '') continue;
+        const label = key === 'comments' ? 'Notes' : key;
+        parts.push(`${label}: ${value}`);
+      }
+      return parts.join(' · ');
+    } catch {
+      return item.customMeasurements;
+    }
+  }
+
   subtotal(): number {
     const o = this.order();
     if (!o) return 0;

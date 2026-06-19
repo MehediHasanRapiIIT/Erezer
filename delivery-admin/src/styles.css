@@ -1,1 +1,28 @@
 @import "tailwindcss";
+
+/* ───────────────────────────────────────────────────────────────────────────
+   Reusable list/table action buttons (Edit / Delete / Send / Remove).
+   Bordered pill + icon, colour-on-hover. Keeps row actions consistent across
+   coupons, discounts, newsletter, variants, order notes, settings, etc.
+   ─────────────────────────────────────────────────────────────────────────── */
+@layer components {
+  .act-btn {
+    @apply inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white
+           px-2.5 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition
+           hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .act-btn svg { @apply h-3.5 w-3.5; }
+
+  .act-btn-edit   { @apply hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700; }
+  .act-btn-delete { @apply text-gray-600 hover:border-red-300 hover:bg-red-50 hover:text-red-600; }
+  .act-btn-send   { @apply hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700; }
+
+  /* Compact icon-only variant for dense form rows (remove a column/row/image). */
+  .act-btn-icon {
+    @apply inline-flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200
+           bg-white text-gray-500 shadow-sm transition
+           hover:border-red-300 hover:bg-red-50 hover:text-red-600
+           disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .act-btn-icon svg { @apply h-3.5 w-3.5; }
+}

@@ -247,6 +247,12 @@ type PaymentMethod = 'CASH' | 'BKASH' | 'CARD';
                 <span class="tabular-nums">−{{ summaryDiscount() | currency:'BDT':'৳' }}</span>
               </div>
             }
+            @if (summarySurcharge() > 0) {
+              <div class="flex justify-between">
+                <span class="app-muted">Custom tailoring</span>
+                <span class="tabular-nums">+{{ summarySurcharge() | currency:'BDT':'৳' }}</span>
+              </div>
+            }
           </div>
           <div class="my-3 border-t border-neutral-200 dark:border-neutral-800"></div>
           <div class="flex items-baseline justify-between">
@@ -328,7 +334,11 @@ export class CheckoutPage implements OnInit, OnDestroy {
   protected readonly summaryShipping = computed(() => this.quote()?.shippingFee ?? this.store.shippingFee());
   protected readonly summaryTax      = computed(() => this.quote()?.taxAmount ?? 0);
   protected readonly summaryDiscount = computed(() => this.quote()?.discountAmount ?? this.store.discountAmount());
-  protected readonly summaryTotal    = computed(() => this.quote()?.total ?? this.store.cartTotal());
+  /** Flat custom-size surcharge total — from the server quote, else summed from the local cart (once per line). */
+  protected readonly summarySurcharge = computed(() =>
+    this.quote()?.customSurcharge
+    ?? this.store.cartItemsDetailed().reduce((acc, i) => acc + (i.customMeasurements ? (i.customSurcharge ?? 0) : 0), 0));
+  protected readonly summaryTotal    = computed(() => this.quote()?.total ?? (this.store.cartTotal() + this.summarySurcharge()));
 
   protected readonly payButtonLabel = computed(() => {
     if (this.paymentMethod() === 'BKASH') return 'Pay with bKash';
@@ -491,6 +501,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
         productId: Number(i.product.id),
         quantity:  i.quantity,
         variantId: i.variantId,
+        customMeasurements: i.customMeasurements ?? undefined,
       })),
       shippingZoneId: zoneId ?? undefined,
       deliveryAddress: address ?? undefined,
@@ -538,7 +549,8 @@ export class CheckoutPage implements OnInit, OnDestroy {
       items:           items.map((i) => ({
         productId: Number(i.product.id),
         quantity:  i.quantity,
-        variantId: i.variantId
+        variantId: i.variantId,
+        customMeasurements: i.customMeasurements ?? undefined,
       })),
       couponCode:      this.store.promoCode() || undefined,
       shippingZoneId:  this.selectedZoneId() ?? undefined,

@@ -90,6 +90,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/newsletter/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/store-settings").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/discounts/active").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/flash-sale").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/flash-sales/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
 

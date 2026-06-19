@@ -12,7 +12,7 @@ import { Subject, Subscription, debounceTime, distinctUntilChanged, switchMap, o
 import { SearchService } from '../../core/services/search.service';
 import { AdminSearchResponse, SearchGroup, SearchItem } from '../../core/models/api.models';
 
-type GroupKey = 'products' | 'categories' | 'orders' | 'customers' | 'riders' | 'reviews';
+type GroupKey = 'products' | 'categories' | 'orders' | 'customers' | 'reviews';
 
 interface RenderGroup {
   key: GroupKey;
@@ -105,7 +105,6 @@ export class GlobalSearchComponent implements OnInit, OnDestroy {
       { key: 'categories', label: 'Categories', group: r.categories },
       { key: 'orders', label: 'Orders', group: r.orders },
       { key: 'customers', label: 'Customers', group: r.customers },
-      { key: 'riders', label: 'Riders', group: r.riders },
       { key: 'reviews', label: 'Reviews', group: r.reviews },
     ];
     return all.filter((g) => g.group && g.group.items.length > 0);
@@ -138,8 +137,6 @@ export class GlobalSearchComponent implements OnInit, OnDestroy {
         return ['/orders', item.id];
       case 'CUSTOMER':
         return ['/customers'];
-      case 'RIDER':
-        return ['/delivery'];
       case 'REVIEW':
         return ['/reviews'];
       default:

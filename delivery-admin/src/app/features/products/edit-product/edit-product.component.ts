@@ -45,6 +45,10 @@ export class EditProductComponent implements OnInit {
   gender          = signal('');
   material        = signal('');
   careInstructions = signal('');
+  // Custom (made-to-order) sizing
+  customSizeEnabled  = signal(false);
+  customSizeSurcharge = signal<number | null>(null);
+  customSizeNote     = signal('');
 
   // State
   categories   = signal<CategoryResponse[]>([]);
@@ -79,6 +83,9 @@ export class EditProductComponent implements OnInit {
         this.gender.set(p.gender ?? '');
         this.material.set(p.material ?? '');
         this.careInstructions.set(p.careInstructions ?? '');
+        this.customSizeEnabled.set(!!p.customSizeEnabled);
+        this.customSizeSurcharge.set(p.customSizeSurcharge ?? null);
+        this.customSizeNote.set(p.customSizeNote ?? '');
         // discountPrice back to percentage is approximate; store 0 if unknown
         this.discount.set(0);
         this.isFetching.set(false);
@@ -122,6 +129,9 @@ export class EditProductComponent implements OnInit {
       gender: this.gender().trim() || undefined,
       material: this.material().trim() || undefined,
       careInstructions: this.careInstructions().trim() || undefined,
+      customSizeEnabled: this.customSizeEnabled(),
+      customSizeSurcharge: this.customSizeEnabled() ? (this.customSizeSurcharge() ?? 0) : null,
+      customSizeNote: this.customSizeEnabled() ? (this.customSizeNote().trim() || null) : null,
     };
 
     this.isLoading.set(true);

@@ -166,14 +166,17 @@ import { RevealDirective } from '../core/reveal.directive';
               <div class="border-t border-neutral-200 dark:border-neutral-800"></div>
 
               <!-- size picker -->
-              @if (availableSizes().length > 0) {
+              @if (availableSizes().length > 0 || customEnabled()) {
                 <div class="space-y-3">
                   <div class="flex items-center justify-between">
                     <p class="text-sm font-medium">
-                      Size<span class="ml-1 text-neutral-500 dark:text-neutral-400">{{ selectedSize() ? '· ' + selectedSize() : '' }}</span>
+                      Size<span class="ml-1 text-neutral-500 dark:text-neutral-400">{{ selectedSize() ? '· ' + selectedSize() : (customSelected() ? '· Custom' : '') }}</span>
                     </p>
                     @if (settings()?.sizeChart && settings()!.sizeChart!.rows.length > 0) {
-                      <button type="button" (click)="openSizeGuide()" class="text-xs font-medium underline underline-offset-4 text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100">Size guide</button>
+                      <button type="button" (click)="openSizeGuide()" class="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-neutral-500 underline underline-offset-4 hover:text-neutral-900 dark:hover:text-neutral-100">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5h18M3 12h18M3 16.5h18M7.5 4.5v3m4.5-3v6m4.5-6v3"/></svg>
+                        Size chart &amp; fit
+                      </button>
                     }
                   </div>
                   <div class="flex flex-wrap gap-2">
@@ -192,7 +195,52 @@ import { RevealDirective } from '../core/reveal.directive';
                         [class.opacity-40]="!isSizeAvailable(s)"
                         [class.line-through]="!isSizeAvailable(s)">{{ s }}</button>
                     }
+                    @if (customEnabled()) {
+                      <button type="button" (click)="selectCustom()"
+                        class="min-w-12 rounded-full border px-5 py-2.5 text-sm font-semibold transition"
+                        [class.border-neutral-900]="customSelected()"
+                        [class.bg-neutral-900]="customSelected()"
+                        [class.text-white]="customSelected()"
+                        [class.dark:border-white]="customSelected()"
+                        [class.dark:bg-white]="customSelected()"
+                        [class.dark:text-black]="customSelected()"
+                        [class.border-neutral-300]="!customSelected()"
+                        [class.dark:border-neutral-700]="!customSelected()"
+                        [class.hover:border-neutral-400]="!customSelected()">Custom</button>
+                    }
                   </div>
+
+                  <!-- custom measurements panel -->
+                  @if (customSelected()) {
+                    <div class="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900/50">
+                      <p class="text-sm font-bold uppercase tracking-wide">
+                        {{ customNoteText() }}
+                        @if (customSurchargeAmt() > 0) { <span class="text-neutral-500">(+{{ customSurchargeAmt() }} BDT)</span> }
+                      </p>
+                      <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        @for (col of customColumns(); track col) {
+                          <label class="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                            {{ col }} (in)
+                            <input type="number" min="0" step="0.5" inputmode="decimal"
+                              [ngModel]="customValues()[col] || ''" (ngModelChange)="setCustomValue(col, $event)"
+                              [ngModelOptions]="{ standalone: true }"
+                              placeholder="e.g. 38"
+                              class="mt-1 w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none transition focus:border-neutral-500 dark:bg-neutral-900"
+                              [class.border-red-400]="!(customValues()[col] && customValues()[col].trim())"
+                              [class.border-neutral-200]="customValues()[col] && customValues()[col].trim()"
+                              [class.dark:border-neutral-700]="customValues()[col] && customValues()[col].trim()" />
+                          </label>
+                        }
+                      </div>
+                      <label class="mt-3 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                        Special instructions / comments
+                        <textarea rows="3" [ngModel]="customComments()" (ngModelChange)="customComments.set($event)"
+                          [ngModelOptions]="{ standalone: true }"
+                          placeholder="e.g. customized sleeve length, fit preferences..."
+                          class="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-neutral-500 dark:border-neutral-700 dark:bg-neutral-900"></textarea>
+                      </label>
+                    </div>
+                  }
                 </div>
               }
 
@@ -527,6 +575,118 @@ import { RevealDirective } from '../core/reveal.directive';
           </button>
         </div>
       </div>
+
+      <!-- ── Size guide & fit modal ─────────────────────────────────────────── -->
+      @if (sizeGuideOpen() && settings()?.sizeChart; as sc) {
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" (click)="closeSizeGuide()" aria-hidden="true"></div>
+
+          <div class="relative z-10 flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-neutral-900">
+            <div class="flex items-center justify-between border-b border-neutral-200 px-6 py-4 dark:border-neutral-800">
+              <h3 class="text-lg font-bold tracking-tight">Size Guide &amp; Fit</h3>
+              <button type="button" (click)="closeSizeGuide()" aria-label="Close" class="inline-flex h-9 w-9 items-center justify-center rounded-full text-neutral-500 transition hover:bg-neutral-100 dark:hover:bg-neutral-800">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+
+            <div class="overflow-y-auto px-6 py-5">
+              <!-- chart table -->
+              <table class="w-full border-collapse overflow-hidden rounded-xl text-sm">
+                <thead>
+                  <tr class="bg-neutral-100 text-left dark:bg-neutral-800">
+                    <th class="px-4 py-2.5 font-semibold">Size</th>
+                    @for (col of settings()!.sizeChart!.columns; track $index) { <th class="px-4 py-2.5 font-semibold">{{ col }} (in)</th> }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of settings()!.sizeChart!.rows; track $index) {
+                    <tr class="border-b border-neutral-100 odd:bg-white even:bg-neutral-50 dark:border-neutral-800 dark:odd:bg-neutral-900 dark:even:bg-neutral-800/40">
+                      <td class="px-4 py-2.5 font-semibold">{{ row.size }}</td>
+                      @for (cell of row.cells; track $index) { <td class="px-4 py-2.5 text-neutral-600 dark:text-neutral-300">{{ (cell.inch ?? cell.cm) ?? '—' }}</td> }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+
+              <!-- don't know your size -->
+              <button type="button" (click)="simulatorOpen.set(!simulatorOpen())"
+                class="mt-5 flex w-full items-center justify-center gap-2 rounded-full border border-neutral-200 px-4 py-3 text-sm font-semibold transition hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M12 17h.008v.008H12V17z"/><circle cx="12" cy="12" r="9"/></svg>
+                {{ simulatorOpen() ? 'Hide size finder' : "Don't know your size? CLICK HERE" }}
+              </button>
+
+              <!-- ── sizing simulator ─────────────────────────────────────────── -->
+              @if (simulatorOpen()) {
+                <div class="mt-6 border-t border-neutral-200 pt-6 dark:border-neutral-800">
+                  <h4 class="text-center text-lg font-bold tracking-tight">Sizing Simulator</h4>
+                  <p class="mt-1 text-center text-xs font-semibold uppercase tracking-[0.2em] text-red-500">Proportional rule</p>
+
+                  <!-- silhouette -->
+                  <div class="relative mx-auto mt-6 flex h-56 w-44 items-center justify-center">
+                    <svg viewBox="0 0 160 200" class="h-full w-full text-neutral-200 dark:text-neutral-700" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="4 4">
+                      <circle cx="80" cy="26" r="18"/>
+                      <path d="M44 60 L20 78 L34 96 L44 88 L44 180 L116 180 L116 88 L126 96 L140 78 L116 60 Z"/>
+                    </svg>
+                    @for (m of simMeasurements(); track m.label) {
+                      <span class="absolute rounded-full bg-white px-3 py-1 text-xs font-semibold shadow dark:bg-neutral-800"
+                        [class.top-20]="$index === 0" [class.bottom-12]="$index !== 0"
+                        [class.left-1]="$index !== 0" [class.right-6]="$index === 0">{{ m.label }}: {{ m.value ?? '—' }}</span>
+                    }
+                  </div>
+
+                  <!-- view toggle -->
+                  <div class="mt-4 flex items-center justify-center gap-5 text-sm">
+                    <button type="button" (click)="simView.set('body')" class="inline-flex items-center gap-1.5 transition"
+                      [class.font-bold]="simView() === 'body'" [class.text-neutral-400]="simView() !== 'body'">
+                      <span class="inline-block h-2.5 w-2.5 rounded-full border" [class.bg-neutral-900]="simView()==='body'" [class.dark:bg-white]="simView()==='body'"></span>
+                      Body Silhouette
+                    </button>
+                    <button type="button" (click)="simView.set('garment')" class="inline-flex items-center gap-1.5 transition"
+                      [class.font-bold]="simView() === 'garment'" [class.text-neutral-400]="simView() !== 'garment'">
+                      <span class="inline-block h-2.5 w-2.5 rounded-full border" [class.bg-neutral-900]="simView()==='garment'" [class.dark:bg-white]="simView()==='garment'"></span>
+                      Garment Fit
+                    </button>
+                  </div>
+
+                  <!-- recommendation row -->
+                  <div class="mt-5 grid grid-cols-3 gap-2 border-y border-neutral-200 py-4 text-center dark:border-neutral-800">
+                    <div><p class="text-xs text-neutral-400">Height Size</p><p class="mt-1 text-lg font-bold">{{ heightSize() }}</p></div>
+                    <div><p class="text-xs text-neutral-400">Weight Size</p><p class="mt-1 text-lg font-bold">{{ weightSize() }}</p></div>
+                    <div><p class="text-xs text-red-500">Recommended</p><p class="mt-1 text-lg font-bold text-red-600">{{ recommendedSize() }}</p></div>
+                  </div>
+
+                  <!-- inputs -->
+                  <div class="mt-5 space-y-4">
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-semibold">Height (ft)</span>
+                      <div class="inline-flex items-center rounded-xl border border-neutral-200 dark:border-neutral-700">
+                        <button type="button" (click)="adjustHeightFt(-1)" class="h-10 w-10 text-lg">−</button>
+                        <span class="w-10 text-center text-sm font-semibold tabular-nums">{{ simHeightFt() }}</span>
+                        <button type="button" (click)="adjustHeightFt(1)" class="h-10 w-10 text-lg">+</button>
+                      </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-semibold">Height (in)</span>
+                      <div class="inline-flex items-center rounded-xl border border-neutral-200 dark:border-neutral-700">
+                        <button type="button" (click)="adjustHeightIn(-1)" class="h-10 w-10 text-lg">−</button>
+                        <span class="w-10 text-center text-sm font-semibold tabular-nums">{{ simHeightIn() }}</span>
+                        <button type="button" (click)="adjustHeightIn(1)" class="h-10 w-10 text-lg">+</button>
+                      </div>
+                    </div>
+                    <div class="flex items-center justify-between gap-4">
+                      <span class="text-sm font-semibold">Weight (kg)</span>
+                      <div class="flex flex-1 items-center gap-3">
+                        <input type="range" min="35" max="130" [ngModel]="simWeightKg()" (ngModelChange)="simWeightKg.set(+$event)" [ngModelOptions]="{ standalone: true }" class="flex-1 accent-neutral-900 dark:accent-white" />
+                        <span class="w-10 text-right text-sm font-semibold tabular-nums">{{ simWeightKg() }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      }
     } @else {
       <p class="app-muted">Product not found.</p>
     }
@@ -573,6 +733,19 @@ export class ProductDetailPage implements OnInit {
   // ── variants ──────────────────────────────────────────────────────────────
   protected readonly variants      = signal<ApiVariant[]>([]);
   protected readonly selectedSize  = signal<string | null>(null);
+
+  // ── custom (made-to-order) sizing ───────────────────────────────────────────
+  protected readonly customSelected = signal(false);
+  protected readonly customValues   = signal<Record<string, string>>({});
+  protected readonly customComments = signal('');
+  protected readonly sizeGuideOpen  = signal(false);
+
+  // ── sizing simulator ("Don't know your size?") ──────────────────────────────
+  protected readonly simulatorOpen = signal(false);
+  protected readonly simView       = signal<'body' | 'garment'>('garment');
+  protected readonly simHeightFt   = signal(5);
+  protected readonly simHeightIn   = signal(8);
+  protected readonly simWeightKg   = signal(70);
 
   // ── related ───────────────────────────────────────────────────────────────
   protected readonly related = signal<ApiProduct[]>([]);
@@ -635,6 +808,99 @@ export class ProductDetailPage implements OnInit {
     return this.variants().find((v) => (v.size ?? null) === size) ?? null;
   });
 
+  // ── custom sizing computed ──────────────────────────────────────────────────
+  protected readonly customEnabled    = computed(() => !!this.product()?.customSizeEnabled);
+  protected readonly customSurchargeAmt = computed(() => this.product()?.customSizeSurcharge ?? 0);
+  protected readonly customNoteText   = computed(() => this.product()?.customSizeNote?.trim() || 'Enter Custom Measurements');
+  /** Measurement inputs mirror the (global) size-chart columns; fall back to Chest/Length. */
+  protected readonly customColumns    = computed(() => {
+    const cols = this.settings()?.sizeChart?.columns;
+    return cols && cols.length > 0 ? cols : ['Chest', 'Length'];
+  });
+  protected readonly customValid = computed(() => {
+    if (!this.customSelected()) return true;
+    const vals = this.customValues();
+    return this.customColumns().every((c) => {
+      const v = vals[c];
+      return v != null && String(v).trim() !== '' && !isNaN(Number(v));
+    });
+  });
+
+  protected setCustomValue(col: string, val: string): void {
+    this.customValues.update((m) => ({ ...m, [col]: val }));
+  }
+
+  protected selectCustom(): void {
+    this.customSelected.set(true);
+    this.selectedSize.set(null);
+  }
+
+  // ── sizing simulator (proportional rule) ────────────────────────────────────
+  private static readonly SIM_ORDER = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', 'XXXL'];
+
+  /** Sizes available from the (global) size chart, in conventional order. */
+  protected readonly simSizes = computed<string[]>(() => {
+    const rows = this.settings()?.sizeChart?.rows ?? [];
+    const sizes = rows.map((r) => r.size);
+    return sizes.length > 0 ? sizes : ['S', 'M', 'L', 'XL', 'XXL', '3XL'];
+  });
+
+  private rank(size: string): number {
+    const i = ProductDetailPage.SIM_ORDER.indexOf(size.toUpperCase());
+    return i >= 0 ? i : ProductDetailPage.SIM_ORDER.indexOf('L');
+  }
+
+  /** Clamp a target rank to the nearest available chart size. */
+  private nearestSize(targetRank: number): string {
+    const sizes = this.simSizes();
+    let best = sizes[0];
+    let bestDelta = Infinity;
+    for (const s of sizes) {
+      const d = Math.abs(this.rank(s) - targetRank);
+      if (d < bestDelta) { bestDelta = d; best = s; }
+    }
+    return best;
+  }
+
+  protected readonly simHeightCm = computed(() => Math.round((this.simHeightFt() * 12 + this.simHeightIn()) * 2.54));
+
+  /** Heuristic height → size (independent of garment chart; standard apparel bands). */
+  protected readonly heightSize = computed(() => {
+    const cm = this.simHeightCm();
+    const band = cm < 165 ? 'S' : cm < 172 ? 'M' : cm < 179 ? 'L' : cm < 185 ? 'XL' : cm < 192 ? 'XXL' : '3XL';
+    return this.nearestSize(this.rank(band));
+  });
+
+  /** Heuristic weight → size. */
+  protected readonly weightSize = computed(() => {
+    const kg = this.simWeightKg();
+    const band = kg < 55 ? 'S' : kg < 65 ? 'M' : kg < 78 ? 'L' : kg < 90 ? 'XL' : kg < 105 ? 'XXL' : '3XL';
+    return this.nearestSize(this.rank(band));
+  });
+
+  /** Recommended size = the larger of the height/weight suggestions. */
+  protected readonly recommendedSize = computed(() =>
+    this.rank(this.weightSize()) >= this.rank(this.heightSize()) ? this.weightSize() : this.heightSize());
+
+  /** Chest/Length (inch) of the recommended size from the chart, for the silhouette. */
+  protected readonly simMeasurements = computed<{ label: string; value: number | null }[]>(() => {
+    const chart = this.settings()?.sizeChart;
+    if (!chart) return [];
+    const row = chart.rows.find((r) => r.size === this.recommendedSize());
+    if (!row) return [];
+    // "Body Silhouette" trims a couple inches off chest for a body (vs garment) read.
+    const ease = this.simView() === 'body' ? 2 : 0;
+    return chart.columns.map((col, i) => {
+      const cell = row.cells[i];
+      const inch = cell?.inch ?? cell?.cm ?? null;
+      const adj = inch != null && /chest/i.test(col) ? inch - ease : inch;
+      return { label: col, value: adj };
+    });
+  });
+
+  protected adjustHeightFt(delta: number): void { this.simHeightFt.update((v) => Math.max(3, Math.min(7, v + delta))); }
+  protected adjustHeightIn(delta: number): void { this.simHeightIn.update((v) => Math.max(0, Math.min(11, v + delta))); }
+
   /** Index of the currently shown image (for the counter / nav). */
   protected readonly currentImageIndex = computed(() => {
     const id = this.selectedImageId();
@@ -660,6 +926,8 @@ export class ProductDetailPage implements OnInit {
   });
 
   protected readonly canAddToCart = computed(() => {
+    // Custom (made-to-order): only requires all measurements filled.
+    if (this.customSelected()) return this.customEnabled() && this.customValid();
     const hasVariants = this.variants().length > 0;
     if (hasVariants && !this.selectedVariant()) return false;
     const status = this.effectiveStockStatus();
@@ -667,6 +935,7 @@ export class ProductDetailPage implements OnInit {
   });
 
   protected readonly addToCartLabel = computed(() => {
+    if (this.customSelected()) return this.customValid() ? 'Add to cart' : 'Enter measurements';
     if (this.variants().length > 0 && !this.selectedVariant()) {
       if (this.availableSizes().length > 0 && !this.selectedSize()) return 'Select a size';
       return 'Select options';
@@ -697,8 +966,12 @@ export class ProductDetailPage implements OnInit {
   }
 
   protected openSizeGuide(): void {
-    this.openSection.set('sizechart');
-    this.scrollTo('product-details');
+    this.sizeGuideOpen.set(true);
+    this.simulatorOpen.set(false);
+  }
+
+  protected closeSizeGuide(): void {
+    this.sizeGuideOpen.set(false);
   }
 
   // ── lifecycle ─────────────────────────────────────────────────────────────
@@ -731,6 +1004,10 @@ export class ProductDetailPage implements OnInit {
     this.selectedImageId.set(null);
     this.variants.set([]);
     this.selectedSize.set(null);
+    this.customSelected.set(false);
+    this.customValues.set({});
+    this.customComments.set('');
+    this.sizeGuideOpen.set(false);
     this.related.set([]);
     this.reviews.set([]);
     this.ratingSummary.set(null);
@@ -799,6 +1076,7 @@ export class ProductDetailPage implements OnInit {
 
   protected selectSize(s: string): void {
     this.selectedSize.set(s);
+    this.customSelected.set(false);
   }
 
   protected isSizeAvailable(size: string): boolean {
@@ -1000,6 +1278,34 @@ export class ProductDetailPage implements OnInit {
   }
 
   protected addToCart(p: ApiProduct): void {
+    // Custom (made-to-order) line: always added to the LOCAL cart (the server
+    // cart doesn't model measurements; loadApiCart preserves these across sync).
+    if (this.customSelected()) {
+      if (!this.customValid()) return;
+      const measurements: Record<string, string> = {};
+      for (const col of this.customColumns()) {
+        const v = this.customValues()[col];
+        if (v != null && String(v).trim() !== '') measurements[col] = String(v).trim();
+      }
+      const comments = this.customComments().trim();
+      if (comments) measurements['comments'] = comments;
+      const unitPrice = this.effectivePrice(p);
+      // Unique size key so multiple custom lines of the same product stay distinct
+      // for local cart tracking/qty/remove. Displayed as "Custom" (size not sent to the API).
+      const sizeKey = `Custom-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+      this.store.addToCart(String(p.id), sizeKey, this.quantity(), {
+        variantId: null,
+        unitPrice,
+        name: `${p.name} — Custom`,
+        image: p.imageUrl,
+        customMeasurements: JSON.stringify(measurements),
+        customSurcharge: this.customSurchargeAmt(),
+      });
+      this.pixel.addToCart(p.id, p.name, unitPrice, this.quantity());
+      this.showCartMessage('Added to cart');
+      return;
+    }
+
     const variant = this.selectedVariant();
     const userId = this.auth.userId();
     const variantId = variant?.id ?? null;

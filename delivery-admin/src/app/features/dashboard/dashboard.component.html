@@ -79,22 +79,6 @@
           <p class="text-xs text-gray-400 mt-1">Compared to yesterday</p>
         </div>
 
-        <!-- Active Riders -->
-        <div class="bg-white rounded-xl border border-gray-200 p-5">
-          <div class="flex items-start justify-between">
-            <p class="text-sm text-gray-500">Active Riders</p>
-            <div class="w-9 h-9 rounded-lg bg-orange-50 flex items-center justify-center">
-              <svg class="w-5 h-5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
-              </svg>
-            </div>
-          </div>
-          <p class="text-2xl font-extrabold text-gray-900 mt-2">
-            {{ stats() ? stats()!.activeRiders : '—' }}
-          </p>
-          <p class="text-xs text-gray-400 mt-1">Currently online</p>
-        </div>
-
         <!-- Pending Orders -->
         <div class="bg-white rounded-xl border border-gray-200 p-5">
           <div class="flex items-start justify-between">
@@ -190,20 +174,6 @@
                 <p class="text-sm font-semibold text-gray-800">Pending Orders</p>
                 <p class="text-xs text-gray-500 mt-0.5">{{ stats() ? stats()!.pendingOrders + ' orders awaiting' : 'Loading...' }}</p>
                 <p class="text-xs text-gray-400 mt-1">Needs attention</p>
-              </div>
-            </div>
-
-            <!-- Riders activity -->
-            <div class="flex items-start gap-3">
-              <div class="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <svg class="w-4 h-4 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                </svg>
-              </div>
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-semibold text-gray-800">Active Riders</p>
-                <p class="text-xs text-gray-500 mt-0.5">{{ stats() ? stats()!.activeRiders + ' riders online' : 'Loading...' }}</p>
-                <p class="text-xs text-gray-400 mt-1">Currently delivering</p>
               </div>
             </div>
 

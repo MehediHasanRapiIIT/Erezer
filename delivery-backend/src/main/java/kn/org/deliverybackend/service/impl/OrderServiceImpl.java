@@ -83,9 +83,11 @@ public class OrderServiceImpl implements OrderService {
         // Reserve inventory and compute the raw subtotal (no shipping yet).
         BigDecimal subtotal = computeAndReserveStock(request.getItems(), null);
         BigDecimal autoDiscount = computeAutoDiscount(request.getItems());
+        BigDecimal customSurcharge = computeCustomSurcharge(request.getItems());
 
         PricedOrder priced = price(subtotal,
                 autoDiscount,
+                customSurcharge,
                 request.getCouponCode(),
                 request.getShippingZoneId(),
                 request.getDeliveryAddress(),
@@ -143,9 +145,11 @@ public class OrderServiceImpl implements OrderService {
     public OrderDTO placeGuestOrder(GuestOrderRequestDTO request) {
         BigDecimal subtotal = computeAndReserveStock(request.getItems(), null);
         BigDecimal autoDiscount = computeAutoDiscount(request.getItems());
+        BigDecimal customSurcharge = computeCustomSurcharge(request.getItems());
 
         PricedOrder priced = price(subtotal,
                 autoDiscount,
+                customSurcharge,
                 request.getCouponCode(),
                 request.getShippingZoneId(),
                 request.getDeliveryAddress(),
@@ -201,6 +205,7 @@ public class OrderServiceImpl implements OrderService {
      */
     private PricedOrder price(BigDecimal subtotal,
                               BigDecimal autoDiscount,
+                              BigDecimal customSurcharge,
                               String couponCode,
                               Long shippingZoneId,
                               String deliveryAddress,
@@ -208,6 +213,7 @@ public class OrderServiceImpl implements OrderService {
         PricedOrder out = new PricedOrder();
         out.subtotal = subtotal != null ? subtotal : BigDecimal.ZERO;
         BigDecimal auto = autoDiscount != null ? autoDiscount : BigDecimal.ZERO;
+        BigDecimal surcharge = customSurcharge != null ? customSurcharge : BigDecimal.ZERO;
 
         // Zone
         ShippingZone zone = shippingZoneId != null
@@ -247,7 +253,8 @@ public class OrderServiceImpl implements OrderService {
 
         out.shippingFee = shipping;
         out.discountAmount = auto.add(couponDiscount);
-        out.total = out.subtotal.subtract(out.discountAmount).add(shipping);
+        // Custom-size surcharge is a service fee — added after discounts (not discounted).
+        out.total = out.subtotal.subtract(out.discountAmount).add(shipping).add(surcharge);
         if (out.total.signum() < 0) out.total = BigDecimal.ZERO;
         return out;
     }
@@ -272,6 +279,30 @@ public class OrderServiceImpl implements OrderService {
             BigDecimal lineSubtotal = unitPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
             total = total.add(discountEngine.discountForLine(
                     product.getId(), product.getCategoryId(), lineSubtotal));
+        }
+        return total;
+    }
+
+    /** A line is a (valid) custom made-to-order line when it carries measurements and the product enables it. */
+    private boolean isCustomLine(OrderItemRequestDTO item, Product product) {
+        return item.getCustomMeasurements() != null && !item.getCustomMeasurements().isBlank()
+                && Boolean.TRUE.equals(product.getCustomSizeEnabled());
+    }
+
+    /** Flat surcharge for a single line (server-authoritative), or ZERO when not a custom line. */
+    private BigDecimal customSurchargeForLine(OrderItemRequestDTO item, Product product) {
+        if (!isCustomLine(item, product)) return BigDecimal.ZERO;
+        BigDecimal s = product.getCustomSizeSurcharge();
+        return s != null ? s : BigDecimal.ZERO;
+    }
+
+    /** Sum of flat custom-size surcharges across the order's lines. */
+    private BigDecimal computeCustomSurcharge(List<OrderItemRequestDTO> items) {
+        if (items == null || items.isEmpty()) return BigDecimal.ZERO;
+        BigDecimal total = BigDecimal.ZERO;
+        for (OrderItemRequestDTO item : items) {
+            Product product = inventoryService.lockAndGetProduct(item.getProductId());
+            total = total.add(customSurchargeForLine(item, product));
         }
         return total;
     }
@@ -433,13 +464,18 @@ public class OrderServiceImpl implements OrderService {
         List<Product> lockedProducts = new ArrayList<>();
         // Aligned with items/lockedProducts; null = product-level (no variant).
         List<Variant> lockedVariants = new ArrayList<>();
+        // Aligned with items; true = made-to-order custom line (no stock reservation).
+        List<Boolean> customFlags = new ArrayList<>();
 
         for (OrderItemRequestDTO item : items) {
             Product product = inventoryService.lockAndGetProduct(item.getProductId());
             int requested = item.getQuantity();
             Variant variant = null;
+            boolean custom = isCustomLine(item, product);
 
-            if (item.getVariantId() != null) {
+            if (custom) {
+                // Made-to-order custom line: no variant and no stock reservation.
+            } else if (item.getVariantId() != null) {
                 // Variant order: validate against the *variant's* stock & price.
                 variant = variantRepository.findById(item.getVariantId())
                         .filter(v -> !Boolean.TRUE.equals(v.getDeleted()))
@@ -466,10 +502,12 @@ public class OrderServiceImpl implements OrderService {
 
             lockedProducts.add(product);
             lockedVariants.add(variant);
+            customFlags.add(custom);
             totalAmount = totalAmount.add(unitPrice.multiply(BigDecimal.valueOf(requested)));
         }
 
         for (int i = 0; i < items.size(); i++) {
+            if (customFlags.get(i)) continue; // made-to-order: nothing to decrement
             int qty = items.get(i).getQuantity();
             Variant variant = lockedVariants.get(i);
             if (variant != null) {
@@ -508,6 +546,13 @@ public class OrderServiceImpl implements OrderService {
                 // Variants are size-only — snapshot the size as the name too.
                 oi.setVariantName(variant.getSize());
                 oi.setVariantSize(variant.getSize());
+            }
+            // Custom (made-to-order) snapshot: measurements + server-authoritative surcharge.
+            if (isCustomLine(item, p)) {
+                oi.setCustomMeasurements(item.getCustomMeasurements());
+                oi.setCustomSurcharge(customSurchargeForLine(item, p));
+                oi.setVariantSize("Custom");
+                oi.setVariantName("Custom");
             }
             orderItemRepository.save(oi);
         }
@@ -558,6 +603,8 @@ public class OrderServiceImpl implements OrderService {
         dto.setVariantId(item.getVariantId());
         dto.setVariantName(item.getVariantName());
         dto.setVariantSize(item.getVariantSize());
+        dto.setCustomMeasurements(item.getCustomMeasurements());
+        dto.setCustomSurcharge(item.getCustomSurcharge());
         return dto;
     }
 

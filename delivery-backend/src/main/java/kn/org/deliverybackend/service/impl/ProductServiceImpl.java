@@ -25,6 +25,7 @@ import kn.org.deliverybackend.exception.ResourceNotFoundException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -70,6 +71,19 @@ public class ProductServiceImpl implements ProductService {
         return productRepository.findById(id)
                 .map(this::toEnrichedResponseDTO)
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+    }
+
+    @Override
+    public List<ProductResponseDTO> getProductsByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) return List.of();
+        // Resolve to entities, then re-emit in the caller's order, skipping missing ids.
+        Map<Long, Product> byId = productRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(Product::getId, p -> p));
+        return ids.stream()
+                .map(byId::get)
+                .filter(java.util.Objects::nonNull)
+                .map(this::toEnrichedResponseDTO)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -126,6 +140,11 @@ public class ProductServiceImpl implements ProductService {
         if (productRequestDTO.getGender() != null)           product.setGender(productRequestDTO.getGender());
         if (productRequestDTO.getMaterial() != null)         product.setMaterial(productRequestDTO.getMaterial());
         if (productRequestDTO.getCareInstructions() != null) product.setCareInstructions(productRequestDTO.getCareInstructions());
+
+        // Custom sizing (null leaves the existing value untouched).
+        if (productRequestDTO.getCustomSizeEnabled() != null)   product.setCustomSizeEnabled(productRequestDTO.getCustomSizeEnabled());
+        if (productRequestDTO.getCustomSizeSurcharge() != null) product.setCustomSizeSurcharge(productRequestDTO.getCustomSizeSurcharge());
+        if (productRequestDTO.getCustomSizeNote() != null)      product.setCustomSizeNote(productRequestDTO.getCustomSizeNote());
 
         return toEnrichedResponseDTO(productRepository.save(product));
     }

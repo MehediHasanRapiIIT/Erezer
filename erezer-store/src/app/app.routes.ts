@@ -10,6 +10,14 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/shop.page').then((m) => m.ShopPage)
   },
   {
+    path: 'flash-sale',
+    loadComponent: () => import('./pages/flash-sales-list.page').then((m) => m.FlashSalesListPage)
+  },
+  {
+    path: 'flash-sale/:id',
+    loadComponent: () => import('./pages/flash-sale.page').then((m) => m.FlashSalePage)
+  },
+  {
     path: 'product/:id',
     loadComponent: () =>
       import('./pages/product-detail.page').then((m) => m.ProductDetailPage)
