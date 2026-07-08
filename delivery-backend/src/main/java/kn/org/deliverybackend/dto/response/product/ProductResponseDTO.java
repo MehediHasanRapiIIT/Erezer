@@ -23,6 +23,7 @@ public class ProductResponseDTO {
     private String imageUrl;
     private Boolean isAvailable;
     private Boolean isNewArrival;
+    private Boolean isFeatured;
     private int stockQuantity;
     private StockStatus stockStatus;
     private double avgRating;

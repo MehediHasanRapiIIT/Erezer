@@ -18,6 +18,10 @@ public interface ProductService {
     List<ProductResponseDTO> getProductsByIds(List<Long> ids);
     ProductResponseDTO createProduct(ProductRequestDTO productRequestDTO, MultipartFile image);
     ProductResponseDTO updateProduct(Long id, ProductRequestDTO productRequestDTO, MultipartFile image);
+
+    /** Toggle the "Featured products" home flag only (leaves pricing/stock untouched). */
+    ProductResponseDTO setFeatured(Long id, boolean value);
+
     void deleteProduct(Long id);
 
     /** Up to {@code limit} products in the same category as {@code id}, excluding the caller. */

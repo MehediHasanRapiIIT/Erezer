@@ -28,6 +28,9 @@ export class OrdersComponent implements OnInit, OnDestroy {
   private readonly POLL_MS = 60_000;
   private poll?: ReturnType<typeof setInterval>;
 
+  // Active vs History (delivered) view
+  tab = signal<'active' | 'history'>('active');
+
   // Filter state
   filterStatus = signal<string>('ALL');
   filterPayment = signal<string>('ALL');
@@ -108,9 +111,12 @@ export class OrdersComponent implements OnInit, OnDestroy {
   loadPage(page: number, silent = false): void {
     if (!silent) this.isLoading.set(true);
     this.errorMessage.set('');
-    const status = this.filterStatus() !== 'ALL' ? this.filterStatus() : undefined;
+    const history = this.tab() === 'history';
+    // History = delivered orders only; Active hides delivered (they moved to history).
+    const status = history ? 'DELIVERED' : (this.filterStatus() !== 'ALL' ? this.filterStatus() : undefined);
+    const excludeStatus = history ? undefined : 'DELIVERED';
     const { fromDate, toDate } = this.getDateRange(this.filterDate());
-    this.orderService.getOrdersPaged(page, this.pageSize, status, fromDate, toDate).subscribe({
+    this.orderService.getOrdersPaged(page, this.pageSize, status, fromDate, toDate, excludeStatus).subscribe({
       next: (data) => {
         this.orders.set(data.content);
         this.currentPage.set(data.number);
@@ -146,6 +152,13 @@ export class OrdersComponent implements OnInit, OnDestroy {
       return { fromDate: fmt(d), toDate: fmt(today) };
     }
     return {};
+  }
+
+  setTab(tab: 'active' | 'history'): void {
+    if (this.tab() === tab) return;
+    this.tab.set(tab);
+    this.filterStatus.set('ALL');
+    this.loadPage(0);
   }
 
   onStatusFilterChange(status: string): void {

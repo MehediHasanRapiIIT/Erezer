@@ -131,6 +131,9 @@ public class ProductServiceImpl implements ProductService {
             product.setImageUrl(productRequestDTO.getImageUrl());
         }
         product.setIsAvailable(productRequestDTO.getIsAvailable());
+        // Home-section flags (null leaves the existing value untouched).
+        if (productRequestDTO.getIsNewArrival() != null) product.setIsNewArrival(productRequestDTO.getIsNewArrival());
+        if (productRequestDTO.getIsFeatured() != null)   product.setIsFeatured(productRequestDTO.getIsFeatured());
         if (productRequestDTO.getUnit() != null) product.setUnit(productRequestDTO.getUnit());
         if (productRequestDTO.getLowStockThreshold() != null) {
             product.setLowStockThreshold(productRequestDTO.getLowStockThreshold());
@@ -171,6 +174,14 @@ public class ProductServiceImpl implements ProductService {
         } else {
             product.setDiscountPrice(dto.getPrice());
         }
+    }
+
+    @Override
+    public ProductResponseDTO setFeatured(Long id, boolean value) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
+        product.setIsFeatured(value);
+        return toEnrichedResponseDTO(productRepository.save(product));
     }
 
     @Override

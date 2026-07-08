@@ -27,4 +27,9 @@ public class StoreSettingsDTO {
     private MarqueeDTO marquee;
     /** Home-page "highlights" stat band. */
     private List<HighlightDTO> highlights;
+
+    /** Checkout payment methods the admin has enabled. */
+    private Boolean paymentCodEnabled;
+    private Boolean paymentBkashEnabled;
+    private Boolean paymentCardEnabled;
 }

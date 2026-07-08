@@ -93,17 +93,20 @@ public class OrderHistoryServiceImpl implements OrderHistoryService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<OrderDTO> getOrdersPaged(int page, int size, String status, String fromDate, String toDate) {
+    public Page<OrderDTO> getOrdersPaged(int page, int size, String status, String excludeStatus, String fromDate, String toDate) {
         PageRequest pageable = PageRequest.of(page, size);
         String statusParam = (status != null && !status.isBlank() && !status.equalsIgnoreCase("ALL"))
                 ? status.toUpperCase() : null;
+        // Active list hides finished orders (e.g. DELIVERED) which live in history.
+        String excludeParam = (excludeStatus != null && !excludeStatus.isBlank())
+                ? excludeStatus.toUpperCase() : null;
 
         // Pass ISO date strings directly; null means no filter
         String from = (fromDate != null && !fromDate.isBlank()) ? fromDate : null;
         // End of day for toDate
         String to = (toDate != null && !toDate.isBlank()) ? toDate + " 23:59:59" : null;
 
-        return orderRepository.findOrdersFiltered(statusParam, from, to, pageable)
+        return orderRepository.findOrdersFiltered(statusParam, excludeParam, from, to, pageable)
                 .map(this::toOrderDTOWithItems);
     }
 

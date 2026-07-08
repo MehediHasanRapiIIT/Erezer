@@ -273,6 +273,10 @@
                     <input type="checkbox" [ngModel]="isNewArrival()" (ngModelChange)="isNewArrival.set($event)" class="accent-blue-600"/>
                     <span class="text-sm text-gray-700">Show in <strong>New arrivals</strong> on the home page</span>
                   </label>
+                  <label class="mt-3 flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" [ngModel]="isFeatured()" (ngModelChange)="isFeatured.set($event)" class="accent-blue-600"/>
+                    <span class="text-sm text-gray-700">Show in <strong>Featured products</strong> on the home page</span>
+                  </label>
                 </div>
               </div>
             </div>

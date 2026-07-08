@@ -26,16 +26,19 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     @Query(value = "SELECT * FROM orders o WHERE o.deleted = false " +
             "AND (:status IS NULL OR o.order_status = :status) " +
+            "AND (:excludeStatus IS NULL OR o.order_status <> :excludeStatus) " +
             "AND (:fromDate IS NULL OR o.created_at >= CAST(:fromDate AS timestamp)) " +
             "AND (:toDate IS NULL OR o.created_at <= CAST(:toDate AS timestamp)) " +
             "ORDER BY o.created_at DESC",
             countQuery = "SELECT COUNT(*) FROM orders o WHERE o.deleted = false " +
                     "AND (:status IS NULL OR o.order_status = :status) " +
+                    "AND (:excludeStatus IS NULL OR o.order_status <> :excludeStatus) " +
                     "AND (:fromDate IS NULL OR o.created_at >= CAST(:fromDate AS timestamp)) " +
                     "AND (:toDate IS NULL OR o.created_at <= CAST(:toDate AS timestamp))",
             nativeQuery = true)
     Page<Order> findOrdersFiltered(
             @Param("status") String status,
+            @Param("excludeStatus") String excludeStatus,
             @Param("fromDate") String fromDate,
             @Param("toDate") String toDate,
             Pageable pageable);

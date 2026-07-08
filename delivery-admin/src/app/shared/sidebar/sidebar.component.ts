@@ -26,6 +26,8 @@ export class SidebarComponent {
     { label: 'Discounts',  icon: 'banners',    route: '/discounts' },
     { label: 'Flash Sales', icon: 'banners',   route: '/flash-sales' },
     { label: 'Returns',    icon: 'orders',     route: '/returns' },
+    { label: 'Custom Orders', icon: 'orders',  route: '/custom-orders' },
+    { label: 'Custom Design', icon: 'products', route: '/custom-design' },
     { label: 'Support',    icon: 'reviews',    route: '/support' },
     { label: 'Newsletter', icon: 'banners',    route: '/newsletter' },
     { label: 'Customers',  icon: 'customers',  route: '/customers' },

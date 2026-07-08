@@ -68,4 +68,15 @@ public class StoreSettings extends AbstractBaseEntity<Long> {
     /** {@code List<HighlightDTO>} serialised as JSON (home highlights band). */
     @Column(name = "highlights_json", columnDefinition = "text")
     private String highlightsJson;
+
+    // ── Checkout payment methods (admin-toggled). Null on legacy rows → treated
+    //    as enabled so existing behaviour is preserved until an admin edits them.
+    @Column(name = "payment_cod_enabled")
+    private Boolean paymentCodEnabled;
+
+    @Column(name = "payment_bkash_enabled")
+    private Boolean paymentBkashEnabled;
+
+    @Column(name = "payment_card_enabled")
+    private Boolean paymentCardEnabled;
 }

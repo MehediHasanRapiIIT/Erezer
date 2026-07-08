@@ -32,6 +32,7 @@ export interface ProductRequest {
   shopId: number;
   isAvailable: boolean;
   isNewArrival?: boolean;
+  isFeatured?: boolean;
   unit?: string;
   lowStockThreshold?: number;
   brand?: string;
@@ -57,6 +58,7 @@ export interface ProductResponse {
   imageUrl: string;
   isAvailable: boolean;
   isNewArrival: boolean | null;
+  isFeatured: boolean | null;
   stockQuantity: number;
   stockStatus: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
   avgRating: number;

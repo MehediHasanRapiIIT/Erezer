@@ -38,6 +38,7 @@ export class EditProductComponent implements OnInit {
   shopId         = signal(1);
   isAvailable    = signal(true);
   isNewArrival   = signal(false);
+  isFeatured     = signal(false);
   // Clothing / catalog attributes
   unit            = signal('');
   lowStockThreshold = signal<number | null>(null);
@@ -77,6 +78,7 @@ export class EditProductComponent implements OnInit {
         this.categoryId.set(p.categoryId);
         this.isAvailable.set(p.isAvailable);
         this.isNewArrival.set(!!p.isNewArrival);
+        this.isFeatured.set(!!p.isFeatured);
         this.unit.set(p.unit ?? '');
         this.lowStockThreshold.set(p.lowStockThreshold ?? null);
         this.brand.set(p.brand ?? '');
@@ -123,6 +125,7 @@ export class EditProductComponent implements OnInit {
       shopId: this.shopId(),
       isAvailable: this.isAvailable(),
       isNewArrival: this.isNewArrival(),
+      isFeatured: this.isFeatured(),
       unit: this.unit().trim() || undefined,
       lowStockThreshold: this.lowStockThreshold() ?? undefined,
       brand: this.brand().trim() || undefined,

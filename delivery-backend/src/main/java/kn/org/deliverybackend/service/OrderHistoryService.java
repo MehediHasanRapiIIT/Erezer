@@ -13,7 +13,7 @@ public interface OrderHistoryService {
     List<OrderDTO> getOrderHistory(UUID userId);
     OrderDTO getOrderDetails(UUID userId, UUID orderId);
     List<OrderDTO> getAllOrders();
-    Page<OrderDTO> getOrdersPaged(int page, int size, String status, String fromDate, String toDate);
+    Page<OrderDTO> getOrdersPaged(int page, int size, String status, String excludeStatus, String fromDate, String toDate);
     List<OrderDTO> getOrdersByStatus(String status);
 
     /**

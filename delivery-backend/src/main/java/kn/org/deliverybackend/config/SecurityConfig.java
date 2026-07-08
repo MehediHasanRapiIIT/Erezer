@@ -88,6 +88,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/payments/bkash/**").permitAll()
                         .requestMatchers("/api/support/contact").permitAll()
                         .requestMatchers("/api/newsletter/**").permitAll()
+                        // Custom design studio: assets, artwork upload, quote
+                        // requests and shared-design lookup are all guest-usable.
+                        .requestMatchers("/api/custom-design/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/store-settings").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/discounts/active").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/flash-sale").permitAll()

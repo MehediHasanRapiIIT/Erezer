@@ -54,6 +54,7 @@ export class ProductService {
     formData.append('shopId', String(dto.shopId));
     formData.append('isAvailable', String(dto.isAvailable));
     if (dto.isNewArrival != null)      formData.append('isNewArrival', String(dto.isNewArrival));
+    if (dto.isFeatured != null)        formData.append('isFeatured', String(dto.isFeatured));
     if (dto.unit != null)              formData.append('unit', dto.unit);
     if (dto.lowStockThreshold != null) formData.append('lowStockThreshold', String(dto.lowStockThreshold));
     if (dto.brand != null)             formData.append('brand', dto.brand);
@@ -67,6 +68,12 @@ export class ProductService {
       formData.append('image', image);
     }
     return this.http.put<ProductResponse>(`${this.baseUrl}/api/products/${id}`, formData);
+  }
+
+  /** Toggle the "Featured products" home flag only (doesn't touch price/stock). */
+  setFeatured(id: number, value: boolean): Observable<ProductResponse> {
+    return this.http.patch<ProductResponse>(
+      `${this.baseUrl}/admin/products/${id}/featured`, null, { params: { value } });
   }
 
   deleteProduct(id: number): Observable<void> {

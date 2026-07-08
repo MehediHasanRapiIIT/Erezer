@@ -85,6 +85,10 @@ public class StoreSettingsServiceImpl implements StoreSettingsService {
         settings.setFooterJson(write(request.getFooter()));
         settings.setMarqueeJson(write(request.getMarquee()));
         settings.setHighlightsJson(write(request.getHighlights()));
+        // Payment toggles: null in request → default enabled.
+        settings.setPaymentCodEnabled(request.getPaymentCodEnabled() == null || request.getPaymentCodEnabled());
+        settings.setPaymentBkashEnabled(request.getPaymentBkashEnabled() == null || request.getPaymentBkashEnabled());
+        settings.setPaymentCardEnabled(request.getPaymentCardEnabled() == null || request.getPaymentCardEnabled());
 
         return toDTO(repository.save(settings));
     }
@@ -106,6 +110,9 @@ public class StoreSettingsServiceImpl implements StoreSettingsService {
                 .footerJson(write(defaultFooter()))
                 .marqueeJson(write(defaultMarquee()))
                 .highlightsJson(write(defaultHighlights()))
+                .paymentCodEnabled(true)
+                .paymentBkashEnabled(true)
+                .paymentCardEnabled(true)
                 .build();
         return repository.save(settings);
     }
@@ -270,6 +277,10 @@ public class StoreSettingsServiceImpl implements StoreSettingsService {
                 .footer(read(s.getFooterJson(), FooterDTO.class))
                 .marquee(read(s.getMarqueeJson(), MarqueeDTO.class))
                 .highlights(readList(s.getHighlightsJson(), new TypeReference<List<HighlightDTO>>() {}))
+                // Null (legacy rows) → enabled, so existing checkouts keep every method.
+                .paymentCodEnabled(s.getPaymentCodEnabled() == null || s.getPaymentCodEnabled())
+                .paymentBkashEnabled(s.getPaymentBkashEnabled() == null || s.getPaymentBkashEnabled())
+                .paymentCardEnabled(s.getPaymentCardEnabled() == null || s.getPaymentCardEnabled())
                 .build();
     }
 }

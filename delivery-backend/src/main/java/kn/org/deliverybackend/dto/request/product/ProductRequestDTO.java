@@ -47,6 +47,9 @@ public class ProductRequestDTO {
     /** Admin flag: show on the home "New arrivals" section. */
     private Boolean isNewArrival;
 
+    /** Admin flag: show on the home "Featured products" section. */
+    private Boolean isFeatured;
+
     // Clothing attributes (Phase 3 catalog). All optional.
     private String brand;
     private String gender;

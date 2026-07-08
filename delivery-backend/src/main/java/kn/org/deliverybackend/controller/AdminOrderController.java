@@ -46,9 +46,10 @@ public class AdminOrderController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String excludeStatus,
             @RequestParam(required = false) String fromDate,
             @RequestParam(required = false) String toDate) {
-        return ResponseEntity.ok(orderHistoryService.getOrdersPaged(page, size, status, fromDate, toDate));
+        return ResponseEntity.ok(orderHistoryService.getOrdersPaged(page, size, status, excludeStatus, fromDate, toDate));
     }
 
     @GetMapping("/status/{status}")

@@ -44,6 +44,10 @@ public class Product extends AbstractBaseEntity<Long> {
     @Column(name = "is_new_arrival")
     private Boolean isNewArrival;
 
+    /** Admin flag: surface this product in the home "Featured products" section. */
+    @Column(name = "is_featured")
+    private Boolean isFeatured;
+
     @Column(name = "stock_quantity", nullable = false, columnDefinition = "int default 0 check (stock_quantity >= 0)")
     private int stockQuantity = 0;
 

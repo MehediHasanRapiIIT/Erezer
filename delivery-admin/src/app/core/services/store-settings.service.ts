@@ -85,6 +85,9 @@ export interface StoreSettings {
   footer: Footer | null;
   marquee: Marquee | null;
   highlights: Highlight[] | null;
+  paymentCodEnabled: boolean | null;
+  paymentBkashEnabled: boolean | null;
+  paymentCardEnabled: boolean | null;
 }
 
 @Injectable({ providedIn: 'root' })

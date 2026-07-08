@@ -174,6 +174,17 @@ export class ProductsListComponent implements OnInit, OnDestroy {
     });
   }
 
+  toggleFeatured(product: ProductResponse): void {
+    this.productService.setFeatured(product.id, !product.isFeatured).subscribe({
+      next: (updated) => {
+        this.products.update(list =>
+          list.map(p => p.id === product.id ? { ...p, isFeatured: updated.isFeatured } : p)
+        );
+      },
+      error: (err) => this.errorMessage.set(parseApiError(err)),
+    });
+  }
+
   editProduct(id: number): void {
     this.router.navigate(['/products', id, 'edit']);
   }

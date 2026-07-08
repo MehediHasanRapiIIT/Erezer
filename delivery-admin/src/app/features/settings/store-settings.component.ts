@@ -110,6 +110,26 @@ const EMPTY_MARQUEE: Marquee = { enabled: true, items: [] };
               </div>
             </section>
 
+            <!-- Payment methods -->
+            <section class="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
+              <h2 class="text-base font-semibold">Payment methods</h2>
+              <p class="text-xs text-gray-500">Choose which options customers can pick at checkout. At least one must stay on.</p>
+              <div class="space-y-2">
+                <label class="flex items-center gap-3 rounded-lg border border-gray-200 px-3 py-2.5 text-sm">
+                  <input type="checkbox" [(ngModel)]="model.paymentCodEnabled" class="h-4 w-4" />
+                  <span class="font-medium text-gray-800">Cash on Delivery</span>
+                </label>
+                <label class="flex items-center gap-3 rounded-lg border border-gray-200 px-3 py-2.5 text-sm">
+                  <input type="checkbox" [(ngModel)]="model.paymentBkashEnabled" class="h-4 w-4" />
+                  <span class="font-medium text-gray-800">bKash</span>
+                </label>
+                <label class="flex items-center gap-3 rounded-lg border border-gray-200 px-3 py-2.5 text-sm">
+                  <input type="checkbox" [(ngModel)]="model.paymentCardEnabled" class="h-4 w-4" />
+                  <span class="font-medium text-gray-800">Card</span>
+                </label>
+              </div>
+            </section>
+
             <!-- Size chart -->
             <section class="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
               <div class="flex items-center justify-between">
@@ -477,6 +497,9 @@ export class StoreSettingsComponent implements OnInit {
     footer: null,
     marquee: null,
     highlights: null,
+    paymentCodEnabled: true,
+    paymentBkashEnabled: true,
+    paymentCardEnabled: true,
   };
   protected chart: SizeChart = { columns: [...EMPTY_CHART.columns], rows: [] };
   protected brand: BrandStory = structuredClone(EMPTY_BRAND);

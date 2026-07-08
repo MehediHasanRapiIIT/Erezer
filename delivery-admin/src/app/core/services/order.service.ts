@@ -28,9 +28,10 @@ export class OrderService {
     return this.http.get<OrderResponse[]>(`${this.baseUrl}/admin/orders`);
   }
 
-  getOrdersPaged(page: number, size: number, status?: string, fromDate?: string, toDate?: string): Observable<PageResponse<OrderResponse>> {
+  getOrdersPaged(page: number, size: number, status?: string, fromDate?: string, toDate?: string, excludeStatus?: string): Observable<PageResponse<OrderResponse>> {
     const params: Record<string, string> = { page: String(page), size: String(size) };
     if (status && status !== 'ALL') params['status'] = status;
+    if (excludeStatus) params['excludeStatus'] = excludeStatus;
     if (fromDate) params['fromDate'] = fromDate;
     if (toDate) params['toDate'] = toDate;
     return this.http.get<PageResponse<OrderResponse>>(`${this.baseUrl}/admin/orders/paged`, { params });

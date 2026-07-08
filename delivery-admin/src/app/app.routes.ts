@@ -124,6 +124,18 @@ export const routes: Routes = [
       import('./features/support/support.component').then((m) => m.SupportComponent),
   },
   {
+    path: 'custom-orders',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/custom-orders/custom-orders.component').then((m) => m.CustomOrdersComponent),
+  },
+  {
+    path: 'custom-design',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/custom-design/custom-design.component').then((m) => m.CustomDesignComponent),
+  },
+  {
     path: 'reports',
     canActivate: [authGuard],
     loadComponent: () =>
