@@ -62,6 +62,71 @@ interface ViewTab { id: CustomDesignView; label: string; }
               </div>
             </div>
 
+            <!-- Contextual: selected element tools -->
+            @if (canvas.active(); as a) {
+              <div class="app-card space-y-3 p-3">
+                <span class="text-xs font-semibold uppercase tracking-wide">
+                  {{ a.kind === 'text' ? 'Text' : a.kind === 'image' ? 'Image' : 'Element' }} options
+                </span>
+
+                @if (a.kind === 'text') {
+                  <select [ngModel]="a.fontFamily" (ngModelChange)="canvas.setFontFamily($event)"
+                    class="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                    [style.font-family]="a.fontFamily">
+                    @for (f of fonts; track f) { <option [value]="f" [style.font-family]="f">{{ f }}</option> }
+                  </select>
+
+                  <div class="flex items-center gap-2">
+                    <label class="flex flex-1 items-center gap-1 text-xs">Size
+                      <input type="number" min="6" max="200" [ngModel]="a.fontSize" (ngModelChange)="canvas.setFontSize($event)"
+                        class="w-16 rounded-lg border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-900" />
+                    </label>
+                    <button type="button" (click)="canvas.toggleBold()" title="Bold"
+                      class="h-8 w-8 rounded-lg border text-sm font-bold" [class.bg-neutral-900]="a.bold" [class.text-white]="a.bold"
+                      [class.border-neutral-300]="!a.bold" [class.dark:border-neutral-700]="!a.bold">B</button>
+                    <button type="button" (click)="canvas.toggleItalic()" title="Italic"
+                      class="h-8 w-8 rounded-lg border text-sm italic" [class.bg-neutral-900]="a.italic" [class.text-white]="a.italic"
+                      [class.border-neutral-300]="!a.italic" [class.dark:border-neutral-700]="!a.italic">I</button>
+                  </div>
+
+                  <div class="flex items-center gap-2">
+                    <div class="flex overflow-hidden rounded-lg border border-neutral-300 dark:border-neutral-700">
+                      @for (al of ['left','center','right']; track al) {
+                        <button type="button" (click)="canvas.setTextAlign($any(al))" class="px-2.5 py-1 text-xs"
+                          [class.bg-neutral-900]="a.textAlign === al" [class.text-white]="a.textAlign === al">
+                          {{ al === 'left' ? '⇤' : al === 'center' ? '≡' : '⇥' }}
+                        </button>
+                      }
+                    </div>
+                    <label class="flex items-center gap-1 text-xs">Fill
+                      <input type="color" [ngModel]="a.fill" (ngModelChange)="canvas.setActiveTextColor($event)" class="h-7 w-8 cursor-pointer rounded" />
+                    </label>
+                  </div>
+
+                  <div class="flex items-center gap-2 text-xs">
+                    <span>Outline</span>
+                    <input type="color" [value]="a.strokeColor" (change)="onStroke($event, a.strokeWidth)" class="h-7 w-8 cursor-pointer rounded" />
+                    <input type="range" min="0" max="8" step="0.5" [ngModel]="a.strokeWidth" (ngModelChange)="canvas.setTextStroke(a.strokeColor, $event)" class="flex-1" />
+                  </div>
+                }
+
+                @if (a.kind === 'image') {
+                  <div class="flex gap-2">
+                    <button type="button" (click)="canvas.flipHorizontal()" class="btn-secondary flex-1 py-1.5 text-xs">Flip ⇆</button>
+                    <button type="button" (click)="canvas.flipVertical()" class="btn-secondary flex-1 py-1.5 text-xs">Flip ⇅</button>
+                  </div>
+                  <button type="button" (click)="removeBg()" [disabled]="removingBg()" class="btn-secondary w-full py-1.5 text-xs">
+                    {{ removingBg() ? 'Removing…' : 'Remove background' }}
+                  </button>
+                  @if (removeBgError()) { <p class="text-xs text-red-500">{{ removeBgError() }}</p> }
+                }
+
+                <label class="flex items-center gap-2 text-xs">Opacity
+                  <input type="range" min="0.1" max="1" step="0.05" [ngModel]="a.opacity" (ngModelChange)="canvas.setOpacity($event)" class="flex-1" />
+                </label>
+              </div>
+            }
+
             <!-- Selectors -->
             <div class="app-card space-y-3 p-3">
               <label class="block text-xs font-semibold uppercase tracking-wide">
@@ -128,6 +193,11 @@ interface ViewTab { id: CustomDesignView; label: string; }
               <button type="button" (click)="canvas.undo()" [disabled]="!canvas.canUndo()" title="Undo" class="rounded-full p-2 hover:bg-white/10 disabled:opacity-40">↶</button>
               <button type="button" (click)="canvas.redo()" [disabled]="!canvas.canRedo()" title="Redo" class="rounded-full p-2 hover:bg-white/10 disabled:opacity-40">↷</button>
               <button type="button" (click)="canvas.deleteActive()" [disabled]="!canvas.hasSelection()" title="Delete" class="rounded-full bg-red-500 p-2 hover:bg-red-600 disabled:opacity-40">🗑</button>
+              <span class="mx-1 h-5 w-px bg-white/20"></span>
+              <button type="button" (click)="canvas.toggleGuide()" title="Toggle printable area"
+                class="rounded-full px-2 py-1 text-[11px] hover:bg-white/10">
+                {{ canvas.showGuide() ? '▣ area' : '▢ area' }}
+              </button>
             </div>
             <div class="flex justify-center rounded-2xl border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
               <!-- IMPORTANT: no background/class styling on the canvas element itself.
@@ -215,11 +285,31 @@ interface ViewTab { id: CustomDesignView; label: string; }
             </div>
 
             <div class="mt-4">
-              <span class="text-xs font-semibold uppercase tracking-wide">Order details / notes *</span>
-              <textarea [(ngModel)]="form.notes" rows="5"
-                placeholder="Required information:&#10;1. Size wise quantity: M: 1&#10;2. Print/Embroidery technique"
+              <span class="text-xs font-semibold uppercase tracking-wide">Size-wise quantity *</span>
+              <div class="mt-1 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                @for (s of orderSizes; track s) {
+                  <label class="flex items-center justify-between gap-2 rounded-lg border border-neutral-200 px-2 py-1.5 text-sm dark:border-neutral-700">
+                    <span class="font-medium">{{ s }}</span>
+                    <input type="number" min="0" [(ngModel)]="sizeQty[s]"
+                      class="w-14 rounded border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-600 dark:bg-neutral-900" />
+                  </label>
+                }
+              </div>
+              <p class="app-muted mt-1 text-xs">Total pieces: {{ totalQty }}</p>
+            </div>
+
+            <div class="mt-3">
+              <span class="text-xs font-semibold uppercase tracking-wide">Print / Embroidery technique *</span>
+              <select [(ngModel)]="submitTechnique" class="cd-input mt-1 w-full">
+                @for (t of selectedItem()?.printTechniques ?? []; track t) { <option [value]="t">{{ t }}</option> }
+              </select>
+            </div>
+
+            <div class="mt-3">
+              <span class="text-xs font-semibold uppercase tracking-wide">Additional notes</span>
+              <textarea [(ngModel)]="notesExtra" rows="3"
+                placeholder="Anything else we should know (deadlines, placement, colours…)"
                 class="cd-input mt-1 w-full"></textarea>
-              <p class="app-muted mt-1 text-xs">Required: size-wise quantity and print/embroidery technique.</p>
             </div>
 
             @if (submitError()) {
@@ -277,6 +367,14 @@ export class CustomDesignPage implements AfterViewInit, OnDestroy {
   protected newText = '';
   protected textColor = '#111111';
 
+  /** Common system/web-safe fonts (no external font loading needed). */
+  protected readonly fonts = [
+    'Inter', 'Arial', 'Helvetica', 'Georgia', 'Times New Roman', 'Courier New',
+    'Trebuchet MS', 'Verdana', 'Impact', 'Comic Sans MS', 'Brush Script MT',
+  ];
+  protected readonly removingBg = signal(false);
+  protected readonly removeBgError = signal('');
+
   protected readonly selectedItem = computed(() => this.items().find((i) => i.name === this.selectedItemName()) ?? null);
   protected readonly selectedColor = computed<CustomDesignColor | null>(
     () => this.selectedItem()?.colors.find((c) => c.name === this.selectedColorName()) ?? null,
@@ -294,7 +392,11 @@ export class CustomDesignPage implements AfterViewInit, OnDestroy {
   protected readonly submitting = signal(false);
   protected readonly submitError = signal('');
   protected readonly submittedRef = signal<string | null>(null);
-  protected form = { firstName: '', lastName: '', phone: '', email: '', shippingAddress: '', apartment: '', city: '', zipCode: '', country: '', notes: '' };
+  protected form = { firstName: '', lastName: '', phone: '', email: '', shippingAddress: '', apartment: '', city: '', zipCode: '', country: '' };
+  /** Size → quantity for the structured order grid, plus technique + free-text notes. */
+  protected sizeQty: Record<string, number> = {};
+  protected submitTechnique = '';
+  protected notesExtra = '';
 
   private canvasReady = false;
 
@@ -464,8 +566,54 @@ export class CustomDesignPage implements AfterViewInit, OnDestroy {
     this.form.firstName ||= this.auth.firstName() ?? '';
     this.form.lastName ||= this.auth.lastName() ?? '';
     this.form.email ||= this.auth.email() ?? '';
+    // Seed the size grid from the selected garment; default the chosen size to 1.
+    const sizes = this.selectedItem()?.sizes ?? [];
+    const grid: Record<string, number> = {};
+    for (const s of sizes) grid[s] = this.sizeQty[s] ?? 0;
+    if (this.selectedSize && !grid[this.selectedSize]) grid[this.selectedSize] = 1;
+    this.sizeQty = grid;
+    this.submitTechnique ||= this.selectedTechnique;
     this.submitError.set('');
     this.showSubmit.set(true);
+  }
+
+  protected get orderSizes(): string[] {
+    return this.selectedItem()?.sizes ?? [];
+  }
+
+  protected get totalQty(): number {
+    return Object.values(this.sizeQty).reduce((sum, q) => sum + (Number(q) || 0), 0);
+  }
+
+  /** Outline colour input passes the current width alongside the new colour. */
+  protected onStroke(event: Event, width: number): void {
+    const color = (event.target as HTMLInputElement).value;
+    this.canvas.setTextStroke(color, width > 0 ? width : 1);
+  }
+
+  protected removeBg(): void {
+    this.removingBg.set(true);
+    this.removeBgError.set('');
+    this.canvas.removeBackground().then((ok) => {
+      this.removingBg.set(false);
+      if (!ok) this.removeBgError.set('Could not process this image (it may be protected).');
+    });
+  }
+
+  private composeNotes(): string {
+    const rows = this.orderSizes
+      .filter((s) => (Number(this.sizeQty[s]) || 0) > 0)
+      .map((s) => `<li>${s}: ${this.sizeQty[s]}</li>`);
+    const parts: string[] = [];
+    if (rows.length) parts.push(`<p><strong>Size-wise quantity</strong></p><ul>${rows.join('')}</ul>`);
+    const tech = this.submitTechnique || this.selectedTechnique;
+    if (tech) parts.push(`<p><strong>Print / Embroidery technique:</strong> ${this.escapeHtml(tech)}</p>`);
+    if (this.notesExtra.trim()) parts.push(`<p><strong>Notes:</strong> ${this.escapeHtml(this.notesExtra.trim())}</p>`);
+    return parts.join('');
+  }
+
+  private escapeHtml(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
   protected closeSubmit(): void {
@@ -476,8 +624,12 @@ export class CustomDesignPage implements AfterViewInit, OnDestroy {
   protected submit(): void {
     const f = this.form;
     if (!f.firstName.trim() || !f.lastName.trim() || !f.phone.trim() || !f.email.trim()
-      || !f.shippingAddress.trim() || !f.city.trim() || !f.country.trim() || !f.notes.trim()) {
-      this.submitError.set('Please fill in all required (*) fields, including the order details.');
+      || !f.shippingAddress.trim() || !f.city.trim() || !f.country.trim()) {
+      this.submitError.set('Please fill in all required (*) fields.');
+      return;
+    }
+    if (this.totalQty <= 0) {
+      this.submitError.set('Enter a quantity for at least one size.');
       return;
     }
     const anyContent = this.viewTabs.some((t) => !this.canvas.isViewEmpty(t.id));
@@ -504,11 +656,11 @@ export class CustomDesignPage implements AfterViewInit, OnDestroy {
         city: f.city.trim(),
         zipCode: f.zipCode.trim() || undefined,
         country: f.country.trim(),
-        notes: f.notes.trim(),
+        notes: this.composeNotes(),
         itemName: this.selectedItemName() || undefined,
         colorName: this.selectedColorName() || undefined,
         size: this.selectedSize || undefined,
-        printTechnique: this.selectedTechnique || undefined,
+        printTechnique: this.submitTechnique || this.selectedTechnique || undefined,
         designJson: this.canvas.serialize(),
       };
       this.api.submitCustomDesignRequest(payload, previews).pipe(

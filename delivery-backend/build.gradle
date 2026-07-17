@@ -50,6 +50,11 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-mail'
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
 
+    // PDF invoices — renders XHTML/CSS to PDF (pure Java, via PDFBox).
+    implementation 'com.openhtmltopdf:openhtmltopdf-pdfbox:1.0.10'
+    // Normalises Thymeleaf HTML output into strict XHTML the PDF renderer accepts.
+    implementation 'org.jsoup:jsoup:1.17.2'
+
     // Redis (sessions, cache, rate limiting)
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 

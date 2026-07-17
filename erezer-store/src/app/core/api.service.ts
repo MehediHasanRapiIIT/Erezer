@@ -36,6 +36,7 @@ import {
   CustomOrderRequest,
   CustomOrderResponse,
   SaveDraftPayload,
+  ApiBundleOffer,
   CreateOrderPayload,
   EmailLoginPayload,
   GuestOrderPayload,
@@ -300,6 +301,11 @@ export class ApiService {
     return this.http.post<ApiOrder>(`${BASE}/app/consumer/${userId}/orders/${orderId}/cancel`, payload);
   }
 
+  /** Edit an order's shipping address + phone (server allows only while PLACED). */
+  updateOrderContact(userId: string, orderId: string, payload: { deliveryAddress: string; phone?: string }): Observable<ApiOrder> {
+    return this.http.patch<ApiOrder>(`${BASE}/app/consumer/${userId}/orders/${orderId}/contact`, payload);
+  }
+
   trackOrder(userId: string, orderId: string): Observable<OrderTracking> {
     return this.http.get<OrderTracking>(`${BASE}/app/consumer/${userId}/orders/${orderId}/track`);
   }
@@ -382,6 +388,22 @@ export class ApiService {
 
   getCustomDesignAssets(): Observable<CustomDesignAssets> {
     return this.http.get<CustomDesignAssets>(`${BASE}/api/custom-design/assets`);
+  }
+
+  // ─── Bundle offers ───────────────────────────────────────────────────────────
+
+  getBundles(): Observable<ApiBundleOffer[]> {
+    return this.http.get<ApiBundleOffer[]>(`${BASE}/api/bundles`);
+  }
+
+  getBundle(id: string): Observable<ApiBundleOffer> {
+    return this.http.get<ApiBundleOffer>(`${BASE}/api/bundles/${id}`);
+  }
+
+  /** Featured bundle for the landing widget; null when none (204). */
+  getFeaturedBundle(): Observable<ApiBundleOffer | null> {
+    return this.http.get<ApiBundleOffer>(`${BASE}/api/bundle`, { observe: 'response' })
+      .pipe(map((res) => res.body ?? null));
   }
 
   /** Uploads a customer's own artwork; returns its stored URL. */

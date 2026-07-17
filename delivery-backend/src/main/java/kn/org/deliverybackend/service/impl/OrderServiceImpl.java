@@ -4,6 +4,7 @@ import kn.org.deliverybackend.dto.OrderDTO;
 import kn.org.deliverybackend.dto.OrderItemDTO;
 import kn.org.deliverybackend.dto.order.CancelOrderRequestDTO;
 import kn.org.deliverybackend.dto.order.GuestOrderRequestDTO;
+import kn.org.deliverybackend.dto.order.UpdateOrderContactRequestDTO;
 import kn.org.deliverybackend.dto.order.OrderStatusHistoryDTO;
 import kn.org.deliverybackend.dto.order.OrderTrackingDTO;
 import kn.org.deliverybackend.dto.request.order.OrderItemRequestDTO;
@@ -31,6 +32,7 @@ import kn.org.deliverybackend.repository.OrderStatusHistoryRepository;
 import kn.org.deliverybackend.repository.ShippingZoneRepository;
 import kn.org.deliverybackend.repository.UsersRepository;
 import kn.org.deliverybackend.repository.VariantRepository;
+import kn.org.deliverybackend.service.BundleService;
 import kn.org.deliverybackend.service.CouponService;
 import kn.org.deliverybackend.service.InventoryService;
 import kn.org.deliverybackend.service.OrderService;
@@ -68,6 +70,8 @@ public class OrderServiceImpl implements OrderService {
 
     // Phase 9: automatic product/category/global discounts
     private final DiscountEngine discountEngine;
+    // Bundle offers ("Buy X Get Y") — server-authoritative fixed pricing.
+    private final BundleService bundleService;
 
     @org.springframework.beans.factory.annotation.Value("${app.orders.cancellation-window-minutes:60}")
     private long cancellationWindowMinutes;
@@ -84,14 +88,17 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal subtotal = computeAndReserveStock(request.getItems(), null);
         BigDecimal autoDiscount = computeAutoDiscount(request.getItems());
         BigDecimal customSurcharge = computeCustomSurcharge(request.getItems());
+        BigDecimal bundleDiscount = request.getBundleId() != null
+                ? bundleService.bundleDiscount(request.getBundleId(), request.getItems(), subtotal) : null;
 
         PricedOrder priced = price(subtotal,
                 autoDiscount,
                 customSurcharge,
-                request.getCouponCode(),
+                bundleDiscount != null ? null : request.getCouponCode(),
                 request.getShippingZoneId(),
                 request.getDeliveryAddress(),
-                request.getClientId());
+                request.getClientId(),
+                bundleDiscount);
 
         Order order = new Order();
         order.setClientId(request.getClientId());
@@ -115,7 +122,15 @@ public class OrderServiceImpl implements OrderService {
             usersRepository.findById(request.getClientId()).ifPresent(user -> {
                 order.setCustomerEmail(user.getEmail());
                 order.setCustomerName(joinName(user.getFirstName(), user.getLastName()));
+                // Prefer the phone entered at checkout; fall back to the profile.
+                order.setCustomerPhone(
+                        (request.getPhone() != null && !request.getPhone().isBlank())
+                                ? request.getPhone().trim()
+                                : user.getPhoneNumber());
             });
+        }
+        if (order.getCustomerPhone() == null && request.getPhone() != null && !request.getPhone().isBlank()) {
+            order.setCustomerPhone(request.getPhone().trim());
         }
 
         Order savedOrder = orderRepository.save(order);
@@ -146,14 +161,17 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal subtotal = computeAndReserveStock(request.getItems(), null);
         BigDecimal autoDiscount = computeAutoDiscount(request.getItems());
         BigDecimal customSurcharge = computeCustomSurcharge(request.getItems());
+        BigDecimal bundleDiscount = request.getBundleId() != null
+                ? bundleService.bundleDiscount(request.getBundleId(), request.getItems(), subtotal) : null;
 
         PricedOrder priced = price(subtotal,
                 autoDiscount,
                 customSurcharge,
-                request.getCouponCode(),
+                bundleDiscount != null ? null : request.getCouponCode(),
                 request.getShippingZoneId(),
                 request.getDeliveryAddress(),
-                null);
+                null,
+                bundleDiscount);
 
         Order order = new Order();
         order.setClientId(null); // guest — no Users row
@@ -171,6 +189,7 @@ public class OrderServiceImpl implements OrderService {
         order.setOrderStatus(OrderStatus.PLACED.name());
         order.setCustomerEmail(request.getEmail());
         order.setCustomerName(joinName(request.getFirstName(), request.getLastName()));
+        order.setCustomerPhone(request.getPhone() == null ? null : request.getPhone().trim());
 
         Order savedOrder = orderRepository.save(order);
         persistItems(savedOrder.getId(), request.getItems());
@@ -209,7 +228,8 @@ public class OrderServiceImpl implements OrderService {
                               String couponCode,
                               Long shippingZoneId,
                               String deliveryAddress,
-                              UUID userId) {
+                              UUID userId,
+                              BigDecimal bundleDiscount) {
         PricedOrder out = new PricedOrder();
         out.subtotal = subtotal != null ? subtotal : BigDecimal.ZERO;
         BigDecimal auto = autoDiscount != null ? autoDiscount : BigDecimal.ZERO;
@@ -224,6 +244,20 @@ public class OrderServiceImpl implements OrderService {
                 : shippingService.resolveZone(deliveryAddress);
         out.shippingZoneId = zone != null ? zone.getId() : null;
         BigDecimal shipping = shippingService.computeFee(zone, out.subtotal);
+
+        // Bundle offer: fixed deal, exclusive of coupons/auto-discounts.
+        if (bundleDiscount != null) {
+            // Judge the free-shipping threshold on the bundle price actually paid,
+            // not the inflated pre-discount list subtotal (see CheckoutQuoteService).
+            BigDecimal bundleGoods = out.subtotal.subtract(bundleDiscount);
+            if (bundleGoods.signum() < 0) bundleGoods = BigDecimal.ZERO;
+            shipping = shippingService.computeFee(zone, bundleGoods);
+            out.shippingFee = shipping;
+            out.discountAmount = bundleDiscount;
+            out.total = bundleGoods.add(shipping).add(surcharge);
+            if (out.total.signum() < 0) out.total = BigDecimal.ZERO;
+            return out;
+        }
 
         // Automatic discounts come off first; the coupon then applies to the remainder.
         BigDecimal couponBase = out.subtotal.subtract(auto);
@@ -376,6 +410,32 @@ public class OrderServiceImpl implements OrderService {
                 null, null));
 
         return toOrderDTO(saved);
+    }
+
+    @Override
+    @Transactional
+    public OrderDTO updateOrderContact(UUID userId, UUID orderId, UpdateOrderContactRequestDTO request) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
+
+        // Ownership (mask as not-found to avoid leaking other users' orders).
+        if (order.getClientId() == null || !order.getClientId().equals(userId)) {
+            throw new ResourceNotFoundException("Order not found: " + orderId);
+        }
+
+        // Editable only while still PLACED (not yet accepted/processed).
+        OrderStatus current = OrderStatus.parse(order.getOrderStatus())
+                .orElseThrow(() -> new InvalidStockOperationException("Order is in an unknown status."));
+        if (current != OrderStatus.PLACED) {
+            throw new InvalidStockOperationException(
+                    "Shipping details can only be changed while the order is Placed (status: "
+                            + current.normalize() + ").");
+        }
+
+        order.setDeliveryAddress(request.getDeliveryAddress().trim());
+        order.setCustomerPhone(request.getPhone() == null || request.getPhone().isBlank()
+                ? null : request.getPhone().trim());
+        return toOrderDTO(orderRepository.save(order));
     }
 
     // ── Customer-facing tracking ───────────────────────────────────────────────
@@ -590,6 +650,7 @@ public class OrderServiceImpl implements OrderService {
                 .map(this::toItemDTO).toList();
         dto.setOrderItems(itemDTOs);
         dto.setCustomerName(order.getCustomerName());
+        dto.setCustomerPhone(order.getCustomerPhone());
         return dto;
     }
 

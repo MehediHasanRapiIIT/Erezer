@@ -106,6 +106,12 @@ export const routes: Routes = [
       import('./features/flash-sale/flash-sale.component').then((m) => m.FlashSaleComponent),
   },
   {
+    path: 'bundles',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/bundles/bundles.component').then((m) => m.BundlesComponent),
+  },
+  {
     path: 'settings',
     canActivate: [authGuard],
     loadComponent: () =>

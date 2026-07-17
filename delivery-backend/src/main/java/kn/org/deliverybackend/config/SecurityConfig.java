@@ -1,5 +1,6 @@
 package kn.org.deliverybackend.config;
 
+import jakarta.servlet.http.HttpServletResponse;
 import kn.org.deliverybackend.security.CustomerJwtAuthFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -95,6 +96,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/discounts/active").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/flash-sale").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/flash-sales/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/bundle").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/bundles/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
 
@@ -110,6 +113,14 @@ public class SecurityConfig {
                         // rejected rather than silently public.
                         .anyRequest().denyAll()
                 )
+                // Unauthenticated requests (missing/expired/invalid customer JWT)
+                // must return 401 — not the servlet default 403 — so the storefront
+                // interceptor can refresh the access token and replay the request.
+                // Genuine business "forbidden" cases still return 403 via the
+                // controllers/GlobalExceptionHandler.
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(
+                        (request, response, authEx) ->
+                                response.sendError(HttpServletResponse.SC_UNAUTHORIZED)))
                 // Install our custom JWT filter before the standard auth filter so
                 // tokens minted by JwtTokenProvider populate the SecurityContext.
                 .addFilterBefore(customerJwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

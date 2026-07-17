@@ -1,44 +1,47 @@
-# AmarBazaar Keycloak Theme
+# Erezer Keycloak Theme
 
-Custom Keycloak login theme matching the AmarBazaar admin panel branding.
+Custom Keycloak login theme for the **Erezer** admin panel — minimal monochrome,
+matching the storefront's `EREZER` wordmark and black/white/neutral palette.
 
 ## How to Install
 
-1. Copy the `amarbazaar` folder to your Keycloak themes directory:
+1. Copy the `erezer` folder to your Keycloak themes directory:
 
    ```
-   Copy: delivery-admin/keycloak-theme/amarbazaar/
-   To:   C:\keycloak\themes\amarbazaar\
+   Copy: delivery-admin/keycloak-theme/erezer/
+   To:   C:\keycloak\themes\erezer\
    ```
 
-   Final structure should be:
+   Final structure:
    ```
    C:\keycloak\themes\
-     └── amarbazaar\
+     └── erezer\
          └── login\
+             ├── login.ftl
              ├── theme.properties
              └── resources\
                  └── css\
                      └── login.css
    ```
 
-2. Restart Keycloak (close and reopen keycloak-start.bat)
+2. Restart Keycloak.
 
-3. Apply the theme in Keycloak Admin Console:
+3. Apply the theme in the Keycloak Admin Console:
    - Open http://localhost:9090
-   - Go to realm: delivery-admin
+   - Realm: **delivery-admin**
    - Realm Settings → Themes
-   - Set Login theme = amarbazaar
-   - Click Save
+   - Set **Login theme = erezer**
+   - Save
 
-## What's Customized
+## Design
 
-- Emerald green (#10b981) primary color matching the admin panel
-- White card with rounded corners and soft shadow
-- Delivery truck logo icon in emerald circle
-- Inter font family
-- Green accent bar at the bottom of the card
-- Styled inputs with emerald focus ring
-- Styled submit button matching the admin panel buttons
-- Error messages styled in red
-- Background color #f0f4f3 matching the admin panel background
+- Two-panel layout: light form panel (left) + charcoal brand panel (right); on
+  tablet/mobile the brand panel collapses and the card centres.
+- Monochrome palette — near-black `#0c0a09`, white, warm neutral greys. No colour accent.
+- `EREZER` wordmark (letter-spaced) instead of the old delivery-truck logo.
+- White card with a thin border + soft shadow, Inter font, neutral inputs with a
+  black focus ring, black "Sign in" button.
+- Right panel lists the admin's real areas: catalog/variants, orders, customers, reports.
+
+> Renamed from the legacy **amarbazaar** theme (green delivery branding). After
+> installing, remember to switch the realm's Login theme to `erezer`.

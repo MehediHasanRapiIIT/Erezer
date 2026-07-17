@@ -87,6 +87,9 @@ public class Order extends AbstractBaseEntity<UUID> {
     @Column(name = "customer_name")
     private String customerName;
 
+    @Column(name = "customer_phone", length = 40)
+    private String customerPhone;
+
     // ── Phase 4: coupon + zone snapshot ────────────────────────────────────────
     @Column(name = "coupon_id")
     private UUID couponId;

@@ -121,6 +121,15 @@ public class OrderHistoryServiceImpl implements OrderHistoryService {
 
     @Override
     @Transactional(readOnly = true)
+    public OrderDTO getOrderByIdForAdmin(UUID orderId) {
+        Order order = orderRepository.findById(orderId)
+                .filter(o -> !Boolean.TRUE.equals(o.getDeleted()))
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
+        return toOrderDTOWithItems(order);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<OrderDTO> getOrdersByStatus(String status) {
         return orderRepository.findByOrderStatus(status)
                 .stream()
@@ -243,12 +252,17 @@ public class OrderHistoryServiceImpl implements OrderHistoryService {
                         .map(this::toEnrichedItemDTO)
                         .collect(Collectors.toList())
         );
-        // Enrich with customer info
+        // Enrich with customer info. Prefer the values snapshotted on the ORDER
+        // (e.g. a phone/address the customer edited at/after checkout) over the
+        // profile, falling back to the profile when the order has none.
         if (order.getClientId() != null) {
             usersRepository.findById(order.getClientId()).ifPresent(user -> {
-                String name = buildName(user);
-                dto.setCustomerName(name);
-                dto.setCustomerPhone(user.getPhoneNumber());
+                String orderName = order.getCustomerName();
+                dto.setCustomerName((orderName != null && !orderName.isBlank())
+                        ? orderName : buildName(user));
+                String orderPhone = order.getCustomerPhone();
+                dto.setCustomerPhone((orderPhone != null && !orderPhone.isBlank())
+                        ? orderPhone : user.getPhoneNumber());
             });
         }
         // Enrich with rider info

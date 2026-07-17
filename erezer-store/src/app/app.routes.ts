@@ -22,6 +22,14 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/flash-sale.page').then((m) => m.FlashSalePage)
   },
   {
+    path: 'bundles',
+    loadComponent: () => import('./pages/bundles.page').then((m) => m.BundlesPage)
+  },
+  {
+    path: 'bundles/:id',
+    loadComponent: () => import('./pages/bundle-detail.page').then((m) => m.BundleDetailPage)
+  },
+  {
     path: 'product/:id',
     loadComponent: () =>
       import('./pages/product-detail.page').then((m) => m.ProductDetailPage)

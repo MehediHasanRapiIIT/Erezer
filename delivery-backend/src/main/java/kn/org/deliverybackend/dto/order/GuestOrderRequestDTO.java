@@ -10,6 +10,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.UUID;
 
 @Data
 @NoArgsConstructor
@@ -29,6 +30,9 @@ public class GuestOrderRequestDTO {
     @NotBlank
     private String deliveryAddress;
 
+    /** Contact phone the guest entered at checkout. */
+    private String phone;
+
     private String paymentMethod;
 
     private Long shopId;
@@ -44,4 +48,7 @@ public class GuestOrderRequestDTO {
 
     /** Optional explicit zone (else resolved from deliveryAddress). */
     private Long shippingZoneId;
+
+    /** Optional bundle offer id — when set, the items are priced as that bundle. */
+    private UUID bundleId;
 }

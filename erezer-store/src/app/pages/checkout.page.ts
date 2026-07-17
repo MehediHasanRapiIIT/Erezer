@@ -5,6 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { catchError, of } from 'rxjs';
 import { EcommerceStore } from '../core/store/ecommerce.store';
 import { SettingsStore } from '../core/store/settings.store';
+import { BundleCheckoutStore } from '../core/store/bundle-checkout.store';
 import { AuthService } from '../core/auth.service';
 import { ApiService } from '../core/api.service';
 import { PixelService } from '../core/pixel.service';
@@ -224,8 +225,13 @@ type PaymentMethod = 'CASH' | 'BKASH' | 'CARD';
         <div class="app-card p-5">
           <h2 class="mb-3 text-base font-semibold">Order summary</h2>
 
+          @if (bundleMode()) {
+            <p class="mb-2 rounded-lg bg-amber-100 px-3 py-1.5 text-xs font-medium text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+              Bundle: {{ bundleCheckout.pending()?.bundleName }}
+            </p>
+          }
           <div class="mb-3 space-y-2">
-            @for (item of store.cartItemsDetailed(); track item.product.id + item.size) {
+            @for (item of effItems(); track $index) {
               <div class="flex justify-between gap-3 text-sm">
                 <span class="min-w-0 truncate text-neutral-600 dark:text-neutral-300">{{ item.product.name }} × {{ item.quantity }}</span>
                 <span class="shrink-0 tabular-nums">{{ item.subtotal | currency:'BDT':'৳' }}</span>
@@ -266,7 +272,7 @@ type PaymentMethod = 'CASH' | 'BKASH' | 'CARD';
 
           <button type="button" (click)="placeOrder()"
             class="btn-primary mt-4 w-full !rounded-full"
-            [disabled]="store.cartCount() === 0 || submitting() || !auth.emailVerified()">
+            [disabled]="effCount() === 0 || submitting() || !auth.emailVerified()">
             {{ submitting() ? 'Placing order…' : (!auth.emailVerified() ? 'Verify your email to order' : payButtonLabel()) }}
           </button>
 
@@ -310,10 +316,18 @@ export class CheckoutPage implements OnInit, OnDestroy {
   private readonly fb     = inject(FormBuilder);
   protected readonly store = inject(EcommerceStore);
   private readonly settingsStore = inject(SettingsStore);
+  protected readonly bundleCheckout = inject(BundleCheckoutStore);
   protected readonly auth  = inject(AuthService);
   private readonly api    = inject(ApiService);
   private readonly router = inject(Router);
   private readonly pixel  = inject(PixelService);
+
+  /** True when completing a Buy-X-Get-Y bundle (items come from the bundle, not the cart). */
+  protected readonly bundleMode = computed(() => !!this.bundleCheckout.pending());
+  /** The items being checked out — bundle lines in bundle mode, else the cart. */
+  protected readonly effItems = computed(() =>
+    this.bundleMode() ? this.bundleCheckout.detailedItems() : this.store.cartItemsDetailed());
+  protected readonly effCount = computed(() => this.effItems().length);
 
   protected readonly submitting    = signal(false);
   protected readonly confirmation  = signal('');
@@ -341,15 +355,25 @@ export class CheckoutPage implements OnInit, OnDestroy {
   protected readonly selectedZoneId  = signal<number | null>(null);
   protected readonly quote           = signal<CheckoutQuoteResponse | null>(null);
 
-  protected readonly summarySubtotal = computed(() => this.quote()?.subtotal ?? this.store.cartSubtotal());
-  protected readonly summaryShipping = computed(() => this.quote()?.shippingFee ?? this.store.shippingFee());
+  private readonly effSubtotal = computed(() => this.effItems().reduce((acc, i) => acc + i.subtotal, 0));
+  protected readonly summarySubtotal = computed(() => this.quote()?.subtotal ?? this.effSubtotal());
+  protected readonly summaryShipping = computed(() => this.quote()?.shippingFee ?? (this.bundleMode() ? 0 : this.store.shippingFee()));
   protected readonly summaryTax      = computed(() => this.quote()?.taxAmount ?? 0);
-  protected readonly summaryDiscount = computed(() => this.quote()?.discountAmount ?? this.store.discountAmount());
+  protected readonly summaryDiscount = computed(() =>
+    this.quote()?.discountAmount
+    ?? (this.bundleMode()
+        ? Math.max(0, this.effSubtotal() - (this.bundleCheckout.pending()?.bundlePrice ?? 0))
+        : this.store.discountAmount()));
   /** Flat custom-size surcharge total — from the server quote, else summed from the local cart (once per line). */
   protected readonly summarySurcharge = computed(() =>
     this.quote()?.customSurcharge
-    ?? this.store.cartItemsDetailed().reduce((acc, i) => acc + (i.customMeasurements ? (i.customSurcharge ?? 0) : 0), 0));
-  protected readonly summaryTotal    = computed(() => this.quote()?.total ?? (this.store.cartTotal() + this.summarySurcharge()));
+    ?? (this.bundleMode() ? 0
+        : this.store.cartItemsDetailed().reduce((acc, i) => acc + (i.customMeasurements ? (i.customSurcharge ?? 0) : 0), 0)));
+  protected readonly summaryTotal    = computed(() =>
+    this.quote()?.total
+    ?? (this.bundleMode()
+        ? (this.bundleCheckout.pending()?.bundlePrice ?? 0)
+        : this.store.cartTotal() + this.summarySurcharge()));
 
   protected readonly payButtonLabel = computed(() => {
     if (this.paymentMethod() === 'BKASH') return 'Pay with bKash';
@@ -376,10 +400,10 @@ export class CheckoutPage implements OnInit, OnDestroy {
   constructor() {
     // Re-fetch the quote whenever the inputs that affect it change.
     effect(() => {
-      const items = this.store.cartItemsDetailed();
+      const items = this.effItems();
       const zoneId = this.selectedZoneId();
       const address = this.checkoutForm.controls.address.value;
-      const code = this.store.promoCode();
+      const code = this.bundleMode() ? null : this.store.promoCode();
       if (items.length === 0) {
         this.quote.set(null);
         return;
@@ -514,7 +538,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
   }
 
   private fetchQuote(zoneId: number | null, address: string | null, code: string | null): void {
-    const items = this.store.cartItemsDetailed();
+    const items = this.effItems();
     if (items.length === 0) return;
     this.api.getCheckoutQuote({
       items: items.map((i) => ({
@@ -525,8 +549,9 @@ export class CheckoutPage implements OnInit, OnDestroy {
       })),
       shippingZoneId: zoneId ?? undefined,
       deliveryAddress: address ?? undefined,
-      couponCode: code || undefined,
+      couponCode: this.bundleMode() ? undefined : (code || undefined),
       userId: this.auth.userId() ?? undefined,
+      bundleId: this.bundleCheckout.pending()?.bundleId,
     }).pipe(catchError(() => of(null))).subscribe((q) => {
       if (q) this.quote.set(q);
     });
@@ -538,7 +563,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
       this.checkoutForm.markAllAsTouched();
       return;
     }
-    if (this.store.cartCount() === 0) return;
+    if (this.effCount() === 0) return;
 
     // Server also enforces this, but block early for a clearer message.
     if (!this.auth.emailVerified()) {
@@ -548,7 +573,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
 
     const userId = this.auth.userId();
     const form   = this.checkoutForm.getRawValue();
-    const items  = this.store.cartItemsDetailed();
+    const items  = this.effItems();
 
     // Checkout requires an account (the page guard also redirects guests).
     if (!userId) {
@@ -561,6 +586,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
 
     const payload = {
       deliveryAddress: form.address,
+      phone:           form.phone,
       paymentMethod:   this.paymentMethod(),
       shopId:          1,
       deliveryCharge:  this.summaryShipping(),
@@ -572,8 +598,9 @@ export class CheckoutPage implements OnInit, OnDestroy {
         variantId: i.variantId,
         customMeasurements: i.customMeasurements ?? undefined,
       })),
-      couponCode:      this.store.promoCode() || undefined,
+      couponCode:      this.bundleMode() ? undefined : (this.store.promoCode() || undefined),
       shippingZoneId:  this.selectedZoneId() ?? undefined,
+      bundleId:        this.bundleCheckout.pending()?.bundleId,
     };
 
     this.api.createOrder(userId, payload)
@@ -585,10 +612,15 @@ export class CheckoutPage implements OnInit, OnDestroy {
       .subscribe((order) => {
         if (!order) return;
 
-        // Clear cart after the order is persisted.
+        // Clear the source after the order is persisted — the bundle in bundle
+        // mode (leaving the real cart untouched), otherwise the cart.
         this.pixel.purchase(order.id, this.summaryTotal());
-        this.store.cart.set([]);
-        this.store.clearPromoCode();
+        if (this.bundleMode()) {
+          this.bundleCheckout.clear();
+        } else {
+          this.store.cart.set([]);
+          this.store.clearPromoCode();
+        }
         this.confirmation.set(order.id);
 
         if (this.paymentMethod() === 'BKASH') {

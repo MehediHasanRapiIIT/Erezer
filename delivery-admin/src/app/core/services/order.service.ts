@@ -68,4 +68,20 @@ export class OrderService {
   getOrderDetails(userId: string, orderId: string): Observable<OrderResponse> {
     return this.http.get<OrderResponse>(`${this.baseUrl}/app/consumer/${userId}/orders/${orderId}`);
   }
+
+  /** Admin: fetch one order fresh (enriched customer + items). */
+  getAdminOrder(orderId: string): Observable<OrderResponse> {
+    return this.http.get<OrderResponse>(`${this.baseUrl}/admin/orders/${orderId}`);
+  }
+
+  /** Invoice PDF (as a Blob) for viewing / printing. */
+  getInvoicePdf(orderId: string): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/admin/orders/${orderId}/invoice/pdf`, { responseType: 'blob' });
+  }
+
+  /** Emails the invoice to the customer + sends a short SMS. */
+  sendInvoice(orderId: string): Observable<{ emailSent: boolean; smsSent: boolean; message: string }> {
+    return this.http.post<{ emailSent: boolean; smsSent: boolean; message: string }>(
+      `${this.baseUrl}/admin/orders/${orderId}/invoice/send`, {});
+  }
 }

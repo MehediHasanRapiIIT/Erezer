@@ -212,6 +212,7 @@ export class HeaderComponent {
   private readonly navLinks: NavLink[] = [
     { route: '/shop', key: 'header.shop', authOnly: false },
     { route: '/custom-design', key: 'header.custom_design', authOnly: false },
+    { route: '/bundles', key: 'header.bundles', authOnly: false },
     { route: '/flash-sale', key: 'header.flash_sale', authOnly: false },
     { route: '/wishlist', key: 'header.wishlist', authOnly: false },
     { route: '/orders', key: 'header.orders', authOnly: true },

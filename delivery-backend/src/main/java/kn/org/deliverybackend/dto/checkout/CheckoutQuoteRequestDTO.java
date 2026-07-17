@@ -28,4 +28,11 @@ public class CheckoutQuoteRequestDTO {
 
     /** Optional — enables per-user coupon limit enforcement. */
     private UUID userId;
+
+    /**
+     * Optional. When set, the items are priced as a bundle offer: the server
+     * validates the selection and forces the items' total to the bundle's fixed
+     * price (coupons/auto-discounts do not stack on a bundle).
+     */
+    private UUID bundleId;
 }

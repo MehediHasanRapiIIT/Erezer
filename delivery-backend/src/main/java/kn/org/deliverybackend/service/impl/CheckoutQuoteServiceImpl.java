@@ -12,6 +12,7 @@ import kn.org.deliverybackend.exception.ResourceNotFoundException;
 import kn.org.deliverybackend.repository.ProductRepository;
 import kn.org.deliverybackend.repository.ShippingZoneRepository;
 import kn.org.deliverybackend.repository.VariantRepository;
+import kn.org.deliverybackend.service.BundleService;
 import kn.org.deliverybackend.service.CheckoutQuoteService;
 import kn.org.deliverybackend.service.CouponService;
 import kn.org.deliverybackend.service.ShippingService;
@@ -31,6 +32,7 @@ public class CheckoutQuoteServiceImpl implements CheckoutQuoteService {
     private final ShippingService shippingService;
     private final CouponService couponService;
     private final DiscountEngine discountEngine;
+    private final BundleService bundleService;
 
     @Override
     @Transactional(readOnly = true)
@@ -71,28 +73,43 @@ public class CheckoutQuoteServiceImpl implements CheckoutQuoteService {
 
         BigDecimal shippingFee = shippingService.computeFee(zone, subtotal);
 
-        // 3. Apply coupon if present, on the subtotal AFTER automatic discounts.
-        BigDecimal couponBase = subtotal.subtract(autoDiscount);
-        if (couponBase.signum() < 0) couponBase = BigDecimal.ZERO;
-        BigDecimal discountAmount = autoDiscount;
+        // 3. Discounts. A bundle offer is its own fixed deal and does NOT stack
+        //    with coupons or automatic discounts; otherwise apply those as before.
+        BigDecimal discountAmount;
         String couponDiscountType = null;
         String couponMessage = null;
         boolean couponApplied = false;
         String couponCode = request.getCouponCode();
 
-        if (couponCode != null && !couponCode.isBlank()) {
-            CouponValidateResponseDTO validation = couponService.validate(
-                    new CouponValidateRequestDTO(couponCode, couponBase, request.getUserId()));
-            if (validation.isValid()) {
-                couponApplied = true;
-                couponDiscountType = validation.getDiscountType();
-                discountAmount = discountAmount.add(validation.getDiscountAmount() == null
-                        ? BigDecimal.ZERO : validation.getDiscountAmount());
-                if (validation.isRemovesShipping()) {
-                    shippingFee = BigDecimal.ZERO;
+        if (request.getBundleId() != null) {
+            discountAmount = bundleService.bundleDiscount(request.getBundleId(), request.getItems(), subtotal);
+            couponCode = null;
+            // Free-shipping thresholds must be judged on the price the customer
+            // actually pays for goods (the bundle price), not the inflated
+            // pre-discount list subtotal — otherwise a bundle wrongly earns free
+            // shipping even when its bundle price is below the free-above cutoff.
+            BigDecimal bundleGoods = subtotal.subtract(discountAmount);
+            if (bundleGoods.signum() < 0) bundleGoods = BigDecimal.ZERO;
+            shippingFee = shippingService.computeFee(zone, bundleGoods);
+        } else {
+            // Coupon applies on the subtotal AFTER automatic discounts.
+            BigDecimal couponBase = subtotal.subtract(autoDiscount);
+            if (couponBase.signum() < 0) couponBase = BigDecimal.ZERO;
+            discountAmount = autoDiscount;
+            if (couponCode != null && !couponCode.isBlank()) {
+                CouponValidateResponseDTO validation = couponService.validate(
+                        new CouponValidateRequestDTO(couponCode, couponBase, request.getUserId()));
+                if (validation.isValid()) {
+                    couponApplied = true;
+                    couponDiscountType = validation.getDiscountType();
+                    discountAmount = discountAmount.add(validation.getDiscountAmount() == null
+                            ? BigDecimal.ZERO : validation.getDiscountAmount());
+                    if (validation.isRemovesShipping()) {
+                        shippingFee = BigDecimal.ZERO;
+                    }
+                } else {
+                    couponMessage = validation.getReason();
                 }
-            } else {
-                couponMessage = validation.getReason();
             }
         }
 

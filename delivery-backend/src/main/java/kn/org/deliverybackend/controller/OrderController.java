@@ -5,6 +5,7 @@ import kn.org.deliverybackend.dto.OrderDTO;
 import kn.org.deliverybackend.dto.order.CancelOrderRequestDTO;
 import kn.org.deliverybackend.dto.order.GuestOrderRequestDTO;
 import kn.org.deliverybackend.dto.order.OrderTrackingDTO;
+import kn.org.deliverybackend.dto.order.UpdateOrderContactRequestDTO;
 import kn.org.deliverybackend.dto.request.order.PlaceOrderRequestDTO;
 import kn.org.deliverybackend.service.OrderService;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +47,14 @@ public class OrderController {
             @PathVariable UUID orderId,
             @Valid @RequestBody(required = false) CancelOrderRequestDTO request) {
         return ResponseEntity.ok(orderService.cancelOrder(userId, orderId, request));
+    }
+
+    @PatchMapping("/{userId}/orders/{orderId}/contact")
+    public ResponseEntity<OrderDTO> updateContact(
+            @PathVariable UUID userId,
+            @PathVariable UUID orderId,
+            @Valid @RequestBody UpdateOrderContactRequestDTO request) {
+        return ResponseEntity.ok(orderService.updateOrderContact(userId, orderId, request));
     }
 
     @GetMapping("/{userId}/orders/{orderId}/track")

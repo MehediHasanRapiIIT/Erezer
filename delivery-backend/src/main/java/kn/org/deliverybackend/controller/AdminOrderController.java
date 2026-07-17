@@ -3,14 +3,18 @@ package kn.org.deliverybackend.controller;
 import jakarta.validation.Valid;
 import kn.org.deliverybackend.dto.OrderDTO;
 import kn.org.deliverybackend.dto.OrderSummaryDTO;
+import kn.org.deliverybackend.dto.invoice.InvoiceSendResultDTO;
 import kn.org.deliverybackend.dto.order.OrderStatusHistoryDTO;
 import kn.org.deliverybackend.dto.order.OrderStatusUpdateRequestDTO;
 import kn.org.deliverybackend.dto.order.OrderTrackingDTO;
 import kn.org.deliverybackend.enumeration.OrderStatus;
+import kn.org.deliverybackend.service.InvoiceService;
 import kn.org.deliverybackend.service.OrderHistoryService;
 import kn.org.deliverybackend.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -30,6 +34,7 @@ public class AdminOrderController {
 
     private final OrderHistoryService orderHistoryService;
     private final OrderService orderService;
+    private final InvoiceService invoiceService;
 
     @GetMapping("/summary")
     public ResponseEntity<OrderSummaryDTO> getSummary() {
@@ -55,6 +60,27 @@ public class AdminOrderController {
     @GetMapping("/status/{status}")
     public ResponseEntity<List<OrderDTO>> getOrdersByStatus(@PathVariable String status) {
         return ResponseEntity.ok(orderHistoryService.getOrdersByStatus(status));
+    }
+
+    @GetMapping("/{orderId}")
+    public ResponseEntity<OrderDTO> getOrder(@PathVariable UUID orderId) {
+        return ResponseEntity.ok(orderHistoryService.getOrderByIdForAdmin(orderId));
+    }
+
+    /** Invoice PDF for viewing / printing. */
+    @GetMapping("/{orderId}/invoice/pdf")
+    public ResponseEntity<byte[]> invoicePdf(@PathVariable UUID orderId) {
+        byte[] pdf = invoiceService.generateInvoicePdf(orderId);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PDF_VALUE)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"invoice-" + orderId + ".pdf\"")
+                .body(pdf);
+    }
+
+    /** Emails the invoice PDF to the customer and sends a short SMS. */
+    @PostMapping("/{orderId}/invoice/send")
+    public ResponseEntity<InvoiceSendResultDTO> sendInvoice(@PathVariable UUID orderId) {
+        return ResponseEntity.ok(invoiceService.sendInvoice(orderId));
     }
 
     /**

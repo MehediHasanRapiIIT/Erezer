@@ -57,10 +57,39 @@ const TIMELINE_STEPS: { status: OrderStatus; label: string }[] = [
             }
           </article>
           <article class="app-card p-4">
-            <p class="text-sm text-neutral-500 dark:text-neutral-400">Shipping address</p>
+            <div class="flex items-start justify-between gap-2">
+              <p class="text-sm text-neutral-500 dark:text-neutral-400">Shipping details</p>
+              @if (canEditContact() && !editingContact()) {
+                <button type="button" (click)="startEditContact(o)" class="text-xs font-semibold text-neutral-700 underline underline-offset-2 hover:text-black dark:text-neutral-300 dark:hover:text-white">Edit</button>
+              }
+            </div>
             <p class="font-medium">{{ o.deliveryAddress }}</p>
+            <p class="text-sm text-neutral-500 dark:text-neutral-400">{{ o.customerPhone || 'No phone' }}</p>
           </article>
         </div>
+
+        <!-- Edit shipping details (only while Placed) -->
+        @if (editingContact()) {
+          <article class="app-card p-5" appReveal>
+            <h2 class="mb-1 text-lg font-semibold">Edit shipping details</h2>
+            <p class="mb-3 text-sm text-neutral-600 dark:text-neutral-300">
+              You can change your address and phone while the order is still <strong>Placed</strong>.
+            </p>
+            <label class="mb-1 block text-xs font-medium text-neutral-500">Shipping address</label>
+            <textarea [(ngModel)]="editAddress" rows="2" maxlength="1000"
+              class="mb-3 w-full rounded-xl border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"></textarea>
+            <label class="mb-1 block text-xs font-medium text-neutral-500">Phone number</label>
+            <input [(ngModel)]="editPhone" maxlength="40" placeholder="e.g. 01700000000"
+              class="w-full rounded-xl border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900" />
+            @if (contactError()) { <p class="mt-2 text-sm text-red-500">{{ contactError() }}</p> }
+            <div class="mt-3 flex gap-2">
+              <button (click)="saveContact()" [disabled]="savingContact() || !editAddress.trim()" class="btn-primary text-sm">
+                {{ savingContact() ? 'Saving…' : 'Save changes' }}
+              </button>
+              <button (click)="editingContact.set(false)" class="btn-secondary text-sm">Cancel</button>
+            </div>
+          </article>
+        }
 
         <!-- Timeline -->
         <article class="app-card p-6" appReveal>
@@ -333,6 +362,13 @@ export class OrderDetailPage implements OnInit, OnDestroy {
   protected readonly cancelling  = signal(false);
   protected cancelReason = '';
 
+  // Edit shipping details (address + phone) — only while PLACED.
+  protected readonly editingContact = signal(false);
+  protected readonly savingContact  = signal(false);
+  protected readonly contactError   = signal<string | null>(null);
+  protected editAddress = '';
+  protected editPhone   = '';
+
   // ── Phase 5: returns ───────────────────────────────────────────────────────
   protected readonly existingReturn = signal<ReturnRequestResponse | null>(null);
 
@@ -389,6 +425,9 @@ export class OrderDetailPage implements OnInit, OnDestroy {
     const t = this.tracking();
     return !!t && t.allowedCustomerNextStates.includes('CANCELLED');
   });
+
+  /** Address + phone are editable only while the order is still PLACED. */
+  protected readonly canEditContact = computed(() => this.currentStatus() === 'PLACED');
 
   protected readonly localOrder = computed(() => {
     const id = this.route.snapshot.paramMap.get('id');
@@ -525,6 +564,35 @@ export class OrderDetailPage implements OnInit, OnDestroy {
             .subscribe((t) => this.tracking.set(t));
         }
       });
+  }
+
+  protected startEditContact(o: ApiOrder): void {
+    this.editAddress = o.deliveryAddress ?? '';
+    this.editPhone = o.customerPhone ?? '';
+    this.contactError.set(null);
+    this.editingContact.set(true);
+  }
+
+  protected saveContact(): void {
+    const userId  = this.auth.userId();
+    const orderId = this.route.snapshot.paramMap.get('id');
+    if (!userId || !orderId || !this.editAddress.trim()) return;
+    this.savingContact.set(true);
+    this.contactError.set(null);
+    this.api.updateOrderContact(userId, orderId, {
+      deliveryAddress: this.editAddress.trim(),
+      phone: this.editPhone.trim() || undefined,
+    }).pipe(catchError((err) => {
+      this.contactError.set(err?.error?.message ?? 'Could not update your shipping details.');
+      this.savingContact.set(false);
+      return of(null);
+    })).subscribe((updated) => {
+      this.savingContact.set(false);
+      if (updated) {
+        this.apiOrder.set(updated);
+        this.editingContact.set(false);
+      }
+    });
   }
 
   protected productName(productId: string): string {

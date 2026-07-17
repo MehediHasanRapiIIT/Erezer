@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
+import { ThemeService } from '../../core/services/theme.service';
 import { GlobalSearchComponent } from '../global-search/global-search.component';
 
 @Component({
@@ -11,6 +12,7 @@ import { GlobalSearchComponent } from '../global-search/global-search.component'
 })
 export class SidebarComponent {
   protected auth = inject(AuthService);
+  protected theme = inject(ThemeService);
 
   navItems = [
     { label: 'Dashboard',  icon: 'dashboard',  route: '/dashboard' },
@@ -25,6 +27,7 @@ export class SidebarComponent {
     { label: 'Coupons',    icon: 'banners',    route: '/coupons' },
     { label: 'Discounts',  icon: 'banners',    route: '/discounts' },
     { label: 'Flash Sales', icon: 'banners',   route: '/flash-sales' },
+    { label: 'Bundles',    icon: 'banners',    route: '/bundles' },
     { label: 'Returns',    icon: 'orders',     route: '/returns' },
     { label: 'Custom Orders', icon: 'orders',  route: '/custom-orders' },
     { label: 'Custom Design', icon: 'products', route: '/custom-design' },

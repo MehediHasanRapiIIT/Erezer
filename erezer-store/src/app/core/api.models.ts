@@ -272,6 +272,7 @@ export interface OrderItemPayload {
 
 export interface CreateOrderPayload {
   deliveryAddress: string;
+  phone?: string;
   paymentMethod: string;
   shopId: number;
   deliveryCharge: number;
@@ -281,6 +282,8 @@ export interface CreateOrderPayload {
   // Phase 4 additions
   couponCode?: string;
   shippingZoneId?: number;
+  /** When set, the items are priced as this bundle offer (server-enforced). */
+  bundleId?: string;
 }
 
 // ─── Phase 4: shipping, coupons, quote, bKash ───────────────────────────────
@@ -319,6 +322,38 @@ export interface CheckoutQuoteRequest {
   deliveryAddress?: string;
   couponCode?: string;
   userId?: string;
+  /** When set, the quote prices the items as this bundle offer. */
+  bundleId?: string;
+}
+
+// ─── Bundle offers ("Buy X Get Y") ───────────────────────────────────────────
+
+/** A curated product a customer can pick for a bundle slot. */
+export interface BundleProduct {
+  id: number;
+  name: string;
+  price: number;
+  discountPrice: number;
+  imageUrl: string | null;
+  stockQuantity: number;
+}
+
+export interface ApiBundleOffer {
+  id: string;
+  name: string;
+  label: string | null;
+  description: string | null;
+  buyCount: number;
+  getCount: number;
+  slots: number;
+  bundlePrice: number;
+  compareAtPrice: number | null;
+  savings: number | null;
+  isActive: boolean;
+  featured: boolean;
+  sortOrder: number;
+  images: string[];
+  products: BundleProduct[];
 }
 
 export interface CheckoutQuoteResponse {
@@ -459,6 +494,7 @@ export interface ApiOrder {
   cancelledAt?: string | null;
   customerEmail?: string | null;
   customerName?: string | null;
+  customerPhone?: string | null;
 }
 
 // ─── Order status (Phase 2) ──────────────────────────────────────────────────

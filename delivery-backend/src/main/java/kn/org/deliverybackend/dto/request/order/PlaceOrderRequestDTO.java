@@ -14,6 +14,9 @@ public class PlaceOrderRequestDTO {
 
     private String deliveryAddress;
 
+    /** Contact phone the customer entered at checkout (falls back to their profile). */
+    private String phone;
+
     private String paymentMethod;
 
     private Long shopId;
@@ -34,4 +37,7 @@ public class PlaceOrderRequestDTO {
 
     /** Optional explicit zone choice (e.g. "Inside Dhaka"); else resolved from deliveryAddress. */
     private Long shippingZoneId;
+
+    /** Optional bundle offer id — when set, the items are priced as that bundle. */
+    private UUID bundleId;
 }

@@ -20,4 +20,9 @@ export class AuthService {
   logout(): Promise<void> {
     return this.keycloak.logout();
   }
+
+  /** Logged-in user's display profile (name, email, initials, role). */
+  userProfile(): { name: string; email: string; initials: string; role: string } | null {
+    return this.keycloak.getUserProfile();
+  }
 }

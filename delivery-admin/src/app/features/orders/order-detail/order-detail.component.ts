@@ -1,6 +1,7 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { catchError, of } from 'rxjs';
 import { SidebarComponent } from '../../../shared/sidebar/sidebar.component';
 import { OrderService } from '../../../core/services/order.service';
@@ -35,6 +36,7 @@ export class OrderDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private orderService = inject(OrderService);
+  private sanitizer = inject(DomSanitizer);
 
   readonly order = signal<OrderResponse | null>(null);
   readonly tracking = signal<OrderTrackingResponse | null>(null);
@@ -43,6 +45,17 @@ export class OrderDetailComponent implements OnInit {
   readonly selectedStatus = signal<OrderStatus>('PLACED');
   readonly statusNote = signal('');
   readonly courierName = signal('');
+
+  // Invoice modal state
+  readonly invoiceModalOpen = signal(false);
+  readonly invoiceLoading = signal(false);          // fetching the preview PDF
+  readonly invoiceBusy = signal(false);             // send in progress
+  readonly invoiceMessage = signal('');
+  readonly invoiceError = signal('');
+  readonly invoicePreviewUrl = signal<SafeResourceUrl | null>(null);
+  private invoiceBlob: Blob | null = null;
+  private invoiceObjectUrl: string | null = null;
+
   readonly trackingNumber = signal('');
 
   readonly isUpdating = signal(false);
@@ -71,21 +84,34 @@ export class OrderDetailComponent implements OnInit {
   // ── lifecycle ──────────────────────────────────────────────────────────────
 
   ngOnInit(): void {
-    // Order passed via router state — read from history.state which persists after navigation
+    // Router-state order (from the list) gives an instant render; the id comes
+    // from the route so the page also works on refresh / deep-link.
     const stateOrder = history.state?.order as OrderResponse | undefined;
+    const orderId = stateOrder?.id ?? this.route.snapshot.paramMap.get('orderId') ?? undefined;
 
-    if (!stateOrder) {
+    if (!orderId) {
       this.router.navigate(['/orders']);
       return;
     }
 
-    this.order.set(stateOrder);
-    this.selectedStatus.set(this.normalizeStatus(stateOrder.orderStatus));
-    this.courierName.set(stateOrder.courierName ?? '');
-    this.trackingNumber.set(stateOrder.trackingNumber ?? '');
+    if (stateOrder) this.applyOrder(stateOrder);
 
-    this.loadTracking(stateOrder.id);
+    // Always fetch fresh so edits (address/phone) and status changes show the
+    // latest — the list data passed via state can be stale.
+    this.orderService.getAdminOrder(orderId).subscribe({
+      next: (o) => this.applyOrder(o),
+      error: () => { if (!stateOrder) this.router.navigate(['/orders']); },
+    });
+
+    this.loadTracking(orderId);
     this.loadStatusOptions();
+  }
+
+  private applyOrder(o: OrderResponse): void {
+    this.order.set(o);
+    this.selectedStatus.set(this.normalizeStatus(o.orderStatus));
+    this.courierName.set(o.courierName ?? '');
+    this.trackingNumber.set(o.trackingNumber ?? '');
   }
 
   private loadTracking(orderId: string): void {
@@ -126,8 +152,84 @@ export class OrderDetailComponent implements OnInit {
     this.router.navigate(['/orders']);
   }
 
+  /** Open the preview modal and fetch the PDF (auth-fetched blob → embedded preview). */
   printInvoice(): void {
-    window.print();
+    const order = this.order();
+    if (!order) return;
+
+    this.invoiceModalOpen.set(true);
+    this.invoiceLoading.set(true);
+    this.invoiceMessage.set('');
+    this.invoiceError.set('');
+    this.revokeInvoiceUrl();
+    this.invoiceBlob = null;
+    this.invoicePreviewUrl.set(null);
+
+    this.orderService.getInvoicePdf(order.id).subscribe({
+      next: (blob) => {
+        this.invoiceBlob = blob;
+        this.invoiceObjectUrl = URL.createObjectURL(blob);
+        // #view=FitH tells the built-in PDF viewer to fit the page width.
+        this.invoicePreviewUrl.set(
+          this.sanitizer.bypassSecurityTrustResourceUrl(this.invoiceObjectUrl + '#view=FitH'),
+        );
+        this.invoiceLoading.set(false);
+      },
+      error: () => {
+        this.invoiceLoading.set(false);
+        this.invoiceError.set('Could not load the invoice preview.');
+      },
+    });
+  }
+
+  /** Email the invoice (PDF attached) + SMS the customer. */
+  sendInvoice(): void {
+    const order = this.order();
+    if (!order || this.invoiceBusy()) return;
+    this.invoiceBusy.set(true);
+    this.invoiceMessage.set('Sending…');
+    this.invoiceError.set('');
+
+    this.orderService.sendInvoice(order.id).subscribe({
+      next: (res) => {
+        this.invoiceBusy.set(false);
+        this.invoiceMessage.set(res.message);
+      },
+      error: (err) => {
+        this.invoiceBusy.set(false);
+        this.invoiceError.set(parseApiError(err) || 'Could not send the invoice.');
+      },
+    });
+  }
+
+  /** Save the previewed PDF to disk. */
+  downloadInvoice(): void {
+    if (!this.invoiceObjectUrl) return;
+    const order = this.order();
+    const ref = order ? 'INV-' + order.id.slice(0, 8).toUpperCase() : 'invoice';
+    const a = document.createElement('a');
+    a.href = this.invoiceObjectUrl;
+    a.download = `${ref}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  /** Close the modal and release the object URL. */
+  closeInvoiceModal(): void {
+    this.invoiceModalOpen.set(false);
+    this.invoicePreviewUrl.set(null);
+    this.invoiceBlob = null;
+    this.invoiceMessage.set('');
+    this.invoiceError.set('');
+    this.revokeInvoiceUrl();
+  }
+
+  private revokeInvoiceUrl(): void {
+    if (this.invoiceObjectUrl) {
+      URL.revokeObjectURL(this.invoiceObjectUrl);
+      this.invoiceObjectUrl = null;
+    }
   }
 
   scrollToStatus(): void {

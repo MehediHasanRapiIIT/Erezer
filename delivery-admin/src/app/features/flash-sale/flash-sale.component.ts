@@ -207,21 +207,34 @@ const EMPTY_FORM: FlashSaleForm = {
 
                 <!-- Product picker -->
                 <div class="mt-5">
-                  <div class="mb-2 flex items-center justify-between">
+                  <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
                     <span class="text-xs font-semibold text-gray-700">
                       Products <span class="font-normal text-gray-400">({{ form.productIds.length }} selected)</span>
                     </span>
-                    <div class="flex items-center gap-3">
-                      <button type="button" (click)="selectAllFiltered()" class="text-xs text-blue-600 underline">Select all (filtered)</button>
-                      <button type="button" (click)="clearSelection()" class="text-xs text-gray-500 underline">Clear</button>
+                    <div class="flex items-center gap-2">
+                      <button type="button" (click)="selectAllFiltered()"
+                        class="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700">
+                        Select all (filtered)
+                      </button>
+                      <button type="button" (click)="clearSelection()"
+                        class="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-600 hover:border-red-300 hover:bg-red-50 hover:text-red-600">
+                        Clear
+                      </button>
                     </div>
                   </div>
-                  <input [ngModel]="productSearch()" (ngModelChange)="productSearch.set($event)"
-                    [ngModelOptions]="{ standalone: true }"
-                    placeholder="Search products…"
-                    class="mb-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
-                  <div class="max-h-64 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-50">
-                    @for (p of filteredProducts(); track p.id) {
+                  <div class="mb-2 flex flex-col gap-2 sm:flex-row">
+                    <input [ngModel]="productSearch()" (ngModelChange)="onProductSearch($event)"
+                      [ngModelOptions]="{ standalone: true }" placeholder="Search products…"
+                      class="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm" />
+                    <select [ngModel]="categoryFilter()" (ngModelChange)="onCategoryFilter($event)"
+                      [ngModelOptions]="{ standalone: true }"
+                      class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm sm:w-52">
+                      <option value="all">All categories</option>
+                      @for (c of categoryOptions(); track c.id) { <option [value]="c.id">{{ c.name }}</option> }
+                    </select>
+                  </div>
+                  <div class="rounded-lg border border-gray-200 divide-y divide-gray-50">
+                    @for (p of pagedProducts(); track p.id) {
                       <label class="flex items-center gap-3 px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer">
                         <input type="checkbox" [checked]="isSelected(p.id)" (change)="toggleProduct(p.id)" />
                         @if (p.imageUrl) {
@@ -234,6 +247,15 @@ const EMPTY_FORM: FlashSaleForm = {
                       <p class="px-3 py-4 text-center text-xs text-gray-400">No products match.</p>
                     }
                   </div>
+                  @if (totalProductPages() > 1) {
+                    <div class="mt-2 flex items-center justify-between text-xs text-gray-500">
+                      <button type="button" (click)="productGoTo(productPage() - 1)" [disabled]="productPage() === 0"
+                        class="rounded-lg border border-gray-200 px-2.5 py-1 hover:bg-gray-50 disabled:opacity-40">Prev</button>
+                      <span>Page {{ productPage() + 1 }} / {{ totalProductPages() }} · {{ filteredProducts().length }} products</span>
+                      <button type="button" (click)="productGoTo(productPage() + 1)" [disabled]="productPage() >= totalProductPages() - 1"
+                        class="rounded-lg border border-gray-200 px-2.5 py-1 hover:bg-gray-50 disabled:opacity-40">Next</button>
+                    </div>
+                  }
                 </div>
 
                 <div class="mt-4 flex justify-end gap-2">
@@ -269,12 +291,50 @@ export class FlashSaleComponent implements OnInit {
 
   protected form: FlashSaleForm = { ...EMPTY_FORM, productIds: [] };
 
+  readonly productPage = signal(0);
+  readonly categoryFilter = signal<string>('all');
+  private readonly productPageSize = 8;
+
+  /** Categories present among the loaded products (for the picker filter). */
+  protected readonly categoryOptions = computed(() => {
+    const map = new Map<number, string>();
+    for (const p of this.products()) {
+      if (p.categoryId != null) map.set(p.categoryId, p.categoryName ?? ('Category ' + p.categoryId));
+    }
+    return [...map.entries()].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  });
+
   protected readonly filteredProducts = computed(() => {
     const q = this.productSearch().trim().toLowerCase();
-    const list = this.products();
-    if (!q) return list;
-    return list.filter((p) => p.name.toLowerCase().includes(q) || (p.brand ?? '').toLowerCase().includes(q));
+    const cat = this.categoryFilter();
+    let list = this.products();
+    if (cat !== 'all') list = list.filter((p) => String(p.categoryId) === cat);
+    if (q) list = list.filter((p) => p.name.toLowerCase().includes(q) || (p.brand ?? '').toLowerCase().includes(q));
+    return list;
   });
+
+  protected onCategoryFilter(v: string): void {
+    this.categoryFilter.set(v);
+    this.productPage.set(0);
+  }
+
+  protected readonly totalProductPages = computed(() =>
+    Math.max(1, Math.ceil(this.filteredProducts().length / this.productPageSize)));
+
+  protected readonly pagedProducts = computed(() => {
+    const start = this.productPage() * this.productPageSize;
+    return this.filteredProducts().slice(start, start + this.productPageSize);
+  });
+
+  protected onProductSearch(q: string): void {
+    this.productSearch.set(q);
+    this.productPage.set(0);
+  }
+
+  protected productGoTo(p: number): void {
+    if (p < 0 || p >= this.totalProductPages()) return;
+    this.productPage.set(p);
+  }
 
   ngOnInit(): void {
     this.reload();
